@@ -3,7 +3,7 @@
 @section('content')
     <h1 class="main-text">Dashboard</h1>
 
-    <!-- Key Metrics Cards -->
+    {{-- <!-- Key Metrics Cards -->
     <div class="row">
         <div class="col-md-3 col-6 mb-3">
             <div class="card p-3 text-center">
@@ -53,7 +53,7 @@
                 <h2>0%</h2>
             </div>
         </div>
-    </div>
+    </div> --}}
 
     <!-- Revenue & Occupancy Chart -->
     <div class="row mb-4">
@@ -62,9 +62,12 @@
                 <h4>Revenue & Occupancy Trends</h4>
                 <div class="d-flex justify-content-end mb-3">
                     <div class="btn-group">
-                        <button type="button" class="btn btn-sm btn-outline-secondary active revenue-filter" data-period="weekly">Week</button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary revenue-filter" data-period="monthly">Month</button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary revenue-filter" data-period="yearly">Year</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary active revenue-filter"
+                            data-period="weekly">Week</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary revenue-filter"
+                            data-period="monthly">Month</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary revenue-filter"
+                            data-period="yearly">Year</button>
                     </div>
                 </div>
                 <div style="height: 300px;">
@@ -74,7 +77,7 @@
         </div>
     </div>
 
-    <!-- Room Status and Occupancy -->
+    {{-- <!-- Room Status and Occupancy -->
     <div class="row mb-4">
         <div class="col-md-6">
             <div class="card p-3">
@@ -100,9 +103,9 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> --}}
 
-    <!-- Revenue by Channel & KPI Cards -->
+    {{-- <!-- Revenue by Channel & KPI Cards -->
     <div class="row mb-4">
         <div class="col-md-6">
             <div class="card p-3">
@@ -185,14 +188,14 @@
                 </table>
             </div>
         </div>
-    </div>
+    </div> --}}
 
     <!-- Rooms Management -->
-    <div class="card p-3">
+    {{-- <div class="card p-3">
         <h4>Rooms</h4>
         <p>No rooms available.</p>
         <a href="{{ route('admin.rooms') }}" class="btn btn-custom">Manage Rooms</a>
-    </div>
+    </div> --}}
 
     <!-- Load Chart.js from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
@@ -205,8 +208,7 @@
                 type: 'line',
                 data: {
                     labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                    datasets: [
-                        {
+                    datasets: [{
                             label: 'Revenue ($)',
                             data: [1200, 1900, 2100, 2500, 3200, 3800, 3100],
                             borderColor: 'rgba(75, 192, 192, 1)',
@@ -287,8 +289,7 @@
                 type: 'bar',
                 data: {
                     labels: ['Standard', 'Deluxe', 'Suite', 'Executive', 'Presidential'],
-                    datasets: [
-                        {
+                    datasets: [{
                             label: 'Total Rooms',
                             data: [20, 15, 10, 5, 2],
                             backgroundColor: 'rgba(108, 117, 125, 0.5)',
@@ -374,8 +375,12 @@
                         revenueData = [12000, 15000, 18000, 20000];
                         occupancyData = [55, 65, 75, 70];
                     } else if (period === 'yearly') {
-                        labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                        revenueData = [45000, 48000, 60000, 65000, 72000, 90000, 110000, 115000, 95000, 75000, 68000, 80000];
+                        labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
+                            'Oct', 'Nov', 'Dec'
+                        ];
+                        revenueData = [45000, 48000, 60000, 65000, 72000, 90000, 110000, 115000,
+                            95000, 75000, 68000, 80000
+                        ];
                         occupancyData = [50, 55, 65, 70, 75, 85, 95, 98, 85, 70, 65, 75];
                     }
 

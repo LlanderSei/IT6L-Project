@@ -3,39 +3,30 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color:floralwhite;
+  background-color: #f8fafc; /* cream background */
 }
+
 header {
   position: sticky;
   top: 0;
   z-index: 1000;
   width: 100%;
 }
-/* .navbar {
-  display: block;
-}
-.navbar-nar {
-  margin-right: 1000px;
-}
-.logo-text {
-  font-family: "Pacifico", serif;
-  color: #000;
-  text-decoration: none;
-  pointer-events: none;
-  margin-left: 8px;
-}
-.navbar-nav {
-  margin-left: 140px;
-} */
+
 .navbar-brand img {
   height: 50px;
   width: auto;
   vertical-align: middle;
 }
-/* .nav-link {
-  padding: 10px 15px;
-  transition: background-color 0.3s ease, color 0.3s ease;
-} */
+
+.card-title {
+  color: #7286d3; /* deep blue titles */
+  font-weight: 600;
+}
+
+.navbar-title {
+  color: #7286d3; /* deep blue text */
+}
 
 .heading-underline {
   position: relative;
@@ -44,14 +35,14 @@ header {
 }
 
 .heading-underline::after {
-  content: '';
+  content: "";
   position: absolute;
   left: 50%;
   bottom: 0;
   transform: translateX(-50%);
   width: 90%;
   height: 4px;
-  background-color: #EFBF04;
+  background-color: #093fb4; /* deep blue underline */
 }
 
 .section-title {
@@ -66,41 +57,51 @@ header {
   bottom: -5px;
   width: 100%;
   height: 4px;
-  background-color: #EFBF04;
+  background-color: #093fb4;
 }
 
 .list-group-color {
-  color: floralwhite;
+  color: #093fb4;
 }
 
 .list-group-color .list-group-item {
   background-color: transparent;
   border: none;
 }
+
 .nav-link:hover {
-  background-color: #f8cb45;
-  color: #000 !important;
-  border-radius: 4px;
+  background-color: #9aa6b2;
+  color: #fff !important;
+  border-radius: 6px;
+  transition: 0.3s ease;
 }
+
 .nav-link.active {
-  background-color: #f8cb45;
-  color: #000 !important;
-  border-radius: 4px;
+  background-color: #093fb4;
+  color: #fff !important;
+  border-radius: 6px;
 }
+
 .btn-primary {
-  background-color: #f8cb45;
-  border-color: #f8cb45;
-  color: #000;
+  background-color: #d9eafd; /* soft pink button */
+  border-color: #9aa6b2;
+  color: #093fb4;
+  transition: 0.3s ease;
 }
+
 .btn-primary:hover {
-  background-color: #e0b33d;
-  border-color: #e0b33d;
+  background-color: #9aa6b2; /* fiery red hover */
+  color: #ffff;
 }
+
 .memberImage {
   max-width: 100%;
   height: 300px;
   object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
 }
+
 /* Modal Styles */
 .modal-content {
   border-radius: 15px;
@@ -109,7 +110,9 @@ header {
   flex-direction: row;
   min-height: 500px;
   font-family: "Poppins", sans-serif;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
 }
+
 .modal-left,
 .modal-right {
   width: 50%;
@@ -120,12 +123,14 @@ header {
   align-items: center;
   text-align: center;
 }
+
 .modal-left {
-  color: white;
+  color: #fff;
   transform: translateX(0);
   transition: transform 0.5s ease-in-out;
   position: relative;
 }
+
 .modal-left::before {
   content: "";
   position: absolute;
@@ -135,20 +140,23 @@ header {
   height: 100%;
   background: linear-gradient(
     135deg,
-    rgba(248, 203, 69, 0.7),
-    rgba(212, 24, 114, 0.7)
+    rgba(9, 63, 180, 0.7),
+    /* deep blue */ rgba(237, 53, 0, 0.6) /* fiery red */
   );
   z-index: 1;
 }
+
 .modal-left > * {
   position: relative;
   z-index: 2;
 }
+
 .modal-right {
   transform: translateX(0);
   transition: transform 0.5s ease-in-out;
   position: relative;
 }
+
 .modal-right::before {
   content: "";
   position: absolute;
@@ -156,58 +164,81 @@ header {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 252, 251, 0.95); /* cream overlay */
   z-index: 1;
 }
+
 .modal-right > * {
   position: relative;
   z-index: 2;
 }
+
 .modal-left.slide-right {
   transform: translateX(100%);
 }
+
 .modal-right.slide-left {
   transform: translateX(-100%);
 }
+
 .modal-btn {
-  background-color: #f8cb45;
+  background-color: #ffd8d8;
   border: none;
-  color: #000;
+  color: #093fb4;
   padding: 10px;
   border-radius: 25px;
   width: 150px;
   margin: 10px auto;
   font-family: "Poppins", sans-serif;
+  transition: 0.3s ease;
 }
+
 .modal-btn:hover {
-  background-color: #e0b33d;
+  background-color: #ed3500;
+  color: #fff;
 }
+
 .modal-input {
-  border: 2px solid #f8cb45;
+  border: 2px solid #ffd8d8;
   border-radius: 25px;
   padding: 10px;
   margin: 10px 0;
   width: 100%;
   font-family: "Poppins", sans-serif;
+  transition: 0.3s ease;
 }
+
+.modal-input:focus {
+  border-color: #ed3500;
+  outline: none;
+  box-shadow: 0 0 6px rgba(237, 53, 0, 0.4);
+}
+
 .social-login {
   display: flex;
   justify-content: center;
   gap: 15px;
   margin-top: 20px;
 }
+
 .social-login i {
   font-size: 24px;
-  color: #666;
+  color: #093fb4; /* deep blue icons */
+  transition: 0.3s ease;
 }
+
+.social-login i:hover {
+  color: #ed3500;
+}
+
 .profile-circle {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background-color: #f8cb45;
+  background-color: #fffcfb; /* cream base */
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #000;
+  color: #093fb4; /* deep blue text */
   font-weight: bold;
 }
