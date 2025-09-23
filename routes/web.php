@@ -45,6 +45,7 @@ Route::prefix('/admin')->name('admin.')->middleware('RestrictByRole:Admin')->gro
   Route::patch('booking/{id}/checkout', [ReservationActionsController::class, 'checkOut'])->name('booking.checkout');
   Route::patch('booking/{id}/cancel', [ReservationActionsController::class, 'cancelBooking'])->name('booking.cancel');
 });
+
 // Route::prefix('/admin')->group(function () {
 // });
 
