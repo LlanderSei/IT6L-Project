@@ -3,29 +3,32 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use App\Models\AssignedRoom;
 use App\Models\Booking;
 use App\Models\Room;
+use App\Models\User;
 use Carbon\Carbon;
 
 class AdminController extends Controller {
-  public function dashboard() {
+  public function viewDashboard() {
     return view('admin.dashboard');
   }
 
-  public function masterDashboard() {
+  public function viewMasterDashboard() {
     return view('admin.master_dashboard');
   }
 
-  public function guest(Request $request) {
+  public function viewGuest(Request $request) {
     $currentDate = Carbon::today();
     $search = $request->input('search');
     $sort = $request->input('sort', 'ID');
     $direction = $request->input('direction', 'asc');
-    $perPage = 10;
+    $perPage = 30;
+    $tab = $request->input('tab', 'pending');
 
     $validSortColumns = ['ID', 'UserName', 'RoomTypeName', 'RoomSizeName', 'HasServices', 'CheckInDate', 'CheckOutDate', 'TotalAmount', 'RoomName'];
     if (!in_array($sort, $validSortColumns)) {
@@ -90,248 +93,392 @@ class AdminController extends Controller {
       $baseQuery->orderBy('BookingDetails.' . $sort, $direction);
     }
 
-    $pendingQuery = clone $baseQuery;
-    $pendingReservations = $pendingQuery->where('BookingDetails.BookingStatus', 'Pending')
-      ->whereExists(function ($q) {
-        $q->select(\DB::raw(1))
-          ->from('PaymentInfos')
-          ->whereColumn('PaymentInfos.BookingDetailID', 'BookingDetails.ID')
-          ->whereIn('PaymentInfos.PaymentStatus', ['Submitted', 'Pending']);
-      })
-      ->paginate($perPage, ['*'], 'pending_page')
-      ->appends(['search' => $search, 'sort' => $sort, 'direction' => $direction]);
+    $reservations = null;
+    $pageName = 'page';
 
-    // dd($pendingQuery);
+    switch ($tab) {
+      case 'pending':
+        $query = clone $baseQuery;
+        $reservations = $query->where('BookingDetails.BookingStatus', 'Pending')
+          ->whereExists(function ($q) {
+            $q->select(\DB::raw(1))
+              ->from('PaymentInfos')
+              ->whereColumn('PaymentInfos.BookingDetailID', 'BookingDetails.ID')
+              ->whereIn('PaymentInfos.PaymentStatus', ['Submitted', 'Pending']);
+          })
+          ->paginate($perPage, ['*'], $pageName)
+          ->appends(['search' => $search, 'sort' => $sort, 'direction' => $direction, 'tab' => $tab]);
+        break;
+      case 'confirmed':
+        $query = clone $baseQuery;
+        $reservations = $query->where('BookingDetails.BookingStatus', 'Confirmed')
+          ->paginate($perPage, ['*'], $pageName)
+          ->appends(['search' => $search, 'sort' => $sort, 'direction' => $direction, 'tab' => $tab]);
+        break;
+      case 'ongoing':
+        $query = clone $baseQuery;
+        $reservations = $query->where('BookingDetails.BookingStatus', 'Ongoing')
+          ->paginate($perPage, ['*'], $pageName)
+          ->appends(['search' => $search, 'sort' => $sort, 'direction' => $direction, 'tab' => $tab]);
+        break;
+      case 'completed':
+        $query = clone $baseQuery;
+        $reservations = $query->where('BookingDetails.BookingStatus', 'Completed')
+          ->paginate($perPage, ['*'], $pageName)
+          ->appends(['search' => $search, 'sort' => $sort, 'direction' => $direction, 'tab' => $tab]);
+        break;
+      case 'cancelled':
+        $query = clone $baseQuery;
+        $reservations = $query->where('BookingDetails.BookingStatus', 'Cancelled')
+          ->paginate($perPage, ['*'], $pageName)
+          ->appends(['search' => $search, 'sort' => $sort, 'direction' => $direction, 'tab' => $tab]);
+        break;
+      default:
+        abort(404);
+    }
 
-    $confirmedQuery = clone $baseQuery;
-    $confirmedReservations = $confirmedQuery->where('BookingDetails.BookingStatus', 'Confirmed')
-      ->paginate($perPage, ['*'], 'confirmed_page')
-      ->appends(['search' => $search, 'sort' => $sort, 'direction' => $direction]);
+    if ($request->ajax()) {
+      return response()->json([
+        'html' => view("admin.partials.guest.tab_{$tab}", compact('reservations', 'search', 'sort', 'direction'))->render()
+      ]);
+    }
 
-    $ongoingQuery = clone $baseQuery;
-    $ongoingReservations = $ongoingQuery->where('BookingDetails.BookingStatus', 'Ongoing')
-      ->paginate($perPage, ['*'], 'ongoing_page')
-      ->appends(['search' => $search, 'sort' => $sort, 'direction' => $direction]);
-
-    $endedQuery = clone $baseQuery;
-    $endedReservations = $endedQuery->where('BookingDetails.BookingStatus', 'Ended')
-      ->paginate($perPage, ['*'], 'ended_page')
-      ->appends(['search' => $search, 'sort' => $sort, 'direction' => $direction]);
-
-    $cancelledQuery = clone $baseQuery;
-    $cancelledReservations = $cancelledQuery->where('BookingDetails.BookingStatus', 'Cancelled')
-      ->paginate($perPage, ['*'], 'cancelled_page')
-      ->appends(['search' => $search, 'sort' => $sort, 'direction' => $direction]);
-
-    return view('admin.guest', [
-      'pendingReservations' => $pendingReservations,
-      'confirmedReservations' => $confirmedReservations,
-      'ongoingReservations' => $ongoingReservations,
-      'endedReservations' => $endedReservations,
-      'cancelledReservations' => $cancelledReservations,
-      'search' => $search,
-      'sort' => $sort,
-      'direction' => $direction,
-    ]);
+    return view('admin.guest', compact('reservations', 'search', 'sort', 'direction', 'tab'));
   }
 
-  public function rooms(Request $request) {
+  public function viewRooms(Request $request) {
     $currentDate = Carbon::today();
     $search = $request->input('search');
     $sort = $request->input('sort', 'RoomName');
     $direction = $request->input('direction', 'asc');
-    $perPage = 10;
+    $perPage = 30;
+    $tab = $request->input('tab', 'occupied');
 
     $validSortColumns = ['RoomName', 'RoomTypeName', 'RoomSizeName', 'Floor', 'status', 'Occupant'];
     if (!in_array($sort, $validSortColumns)) {
       $sort = 'RoomName';
     }
 
-    // Modified: Add Occupant and status to all rooms query
-    $query = Room::with(['roomType', 'roomSize'])
-      ->leftJoin('RoomTypes', 'Rooms.RoomTypeID', '=', 'RoomTypes.ID')
-      ->leftJoin('RoomSizes', 'Rooms.RoomSizeID', '=', 'RoomSizes.ID')
-      ->leftJoin('AssignedRooms', 'Rooms.ID', '=', 'AssignedRooms.RoomID')
-      ->leftJoin('BookingDetails', 'AssignedRooms.BookingDetailID', '=', 'BookingDetails.ID')
-      ->leftJoin('users', 'BookingDetails.UserID', '=', 'users.id')
-      ->select(
-        'Rooms.ID',
-        'Rooms.RoomName',
-        'Rooms.Floor',
-        'RoomTypes.RoomTypeName',
-        'RoomSizes.RoomSizeName',
-        \DB::raw('IFNULL(users.name, "") as Occupant'),
-        \DB::raw('CASE
-                    WHEN BookingDetails.BookingStatus = "Confirmed" THEN "Pending"
-                    WHEN BookingDetails.BookingStatus = "Ongoing" THEN "Occupied"
-                    ELSE "Available"
-                  END as status')
-      )
-      ->where(function ($q) use ($currentDate) {
-        $q->whereNull('BookingDetails.ID')
-          ->orWhereIn('BookingDetails.BookingStatus', ['Confirmed', 'Ongoing'])
+    $reservations = null;
+    $pageName = 'page';
+
+    switch ($tab) {
+      case 'occupied':
+        $query = AssignedRoom::join('Rooms', 'AssignedRooms.RoomID', '=', 'Rooms.ID')
+          ->join('BookingDetails', 'AssignedRooms.BookingDetailID', '=', 'BookingDetails.ID')
+          ->join('RoomTypes', 'Rooms.RoomTypeID', '=', 'RoomTypes.ID')
+          ->join('RoomSizes', 'Rooms.RoomSizeID', '=', 'RoomSizes.ID')
+          ->leftJoin('users', 'BookingDetails.UserID', '=', 'users.id')
+          ->select(
+            'Rooms.ID',
+            'Rooms.RoomName',
+            'Rooms.Floor',
+            'RoomTypes.RoomTypeName',
+            'RoomSizes.RoomSizeName',
+            \DB::raw('IFNULL(users.name, "") as Occupant'),
+            \DB::raw('CASE BookingDetails.BookingStatus
+                        WHEN "Confirmed" THEN "Pending"
+                        WHEN "Ongoing" THEN "Occupied"
+                        ELSE "Unknown"
+                      END as status')
+          )
+          ->whereIn('BookingDetails.BookingStatus', ['Confirmed', 'Ongoing'])
           ->where('BookingDetails.CheckInDate', '<=', $currentDate->endOfDay())
           ->where('BookingDetails.CheckOutDate', '>=', $currentDate->startOfDay());
-      })
-      ->groupBy('Rooms.ID', 'Rooms.RoomName', 'Rooms.Floor', 'RoomTypes.RoomTypeName', 'RoomSizes.RoomSizeName', 'users.name', 'BookingDetails.BookingStatus');
-    // End Modified
 
-    if ($search) {
-      $query->where(function ($q) use ($search) {
-        $q->where('Rooms.RoomName', 'like', '%' . $search . '%')
-          ->orWhere('RoomTypes.RoomTypeName', 'like', '%' . $search . '%')
-          ->orWhere('RoomSizes.RoomSizeName', 'like', '%' . $search . '%')
-          ->orWhere('Rooms.Floor', 'like', '%' . $search . '%')
-          ->orWhere('users.name', 'like', '%' . $search . '%');
-      });
+        if ($search) {
+          $query->where(function ($q) use ($search) {
+            $q->where('Rooms.RoomName', 'like', '%' . $search . '%')
+              ->orWhere('RoomTypes.RoomTypeName', 'like', '%' . $search . '%')
+              ->orWhere('RoomSizes.RoomSizeName', 'like', '%' . $search . '%')
+              ->orWhere('Rooms.Floor', 'like', '%' . $search . '%')
+              ->orWhere('users.name', 'like', '%' . $search . '%');
+          });
+        }
+
+        if ($sort === 'RoomName') {
+          $query->orderByRaw("CAST(SUBSTRING_INDEX(Rooms.RoomName, '-', 1) AS UNSIGNED) $direction")
+            ->orderByRaw("CAST(SUBSTRING_INDEX(Rooms.RoomName, '-', -1) AS UNSIGNED) $direction");
+        } elseif ($sort === 'RoomTypeName') {
+          $query->orderBy('RoomTypes.RoomTypeName', $direction);
+        } elseif ($sort === 'RoomSizeName') {
+          $query->orderBy('RoomSizes.RoomSizeName', $direction);
+        } elseif ($sort === 'Floor') {
+          $query->orderBy('Rooms.Floor', $direction);
+        } elseif ($sort === 'status') {
+          $query->orderBy('status', $direction);
+        } elseif ($sort === 'Occupant') {
+          $query->orderBy('Occupant', $direction);
+        }
+
+        $reservations = $query->groupBy(
+          'Rooms.ID',
+          'Rooms.RoomName',
+          'Rooms.Floor',
+          'RoomTypes.RoomTypeName',
+          'RoomSizes.RoomSizeName',
+          'users.name',
+          'BookingDetails.BookingStatus'
+        )->paginate($perPage, ['*'], $pageName)->appends([
+          'search' => $search,
+          'sort' => $sort,
+          'direction' => $direction,
+          'tab' => $tab,
+        ]);
+        break;
+      case 'available':
+        $query = Room::join('RoomTypes', 'Rooms.RoomTypeID', '=', 'RoomTypes.ID')
+          ->join('RoomSizes', 'Rooms.RoomSizeID', '=', 'RoomSizes.ID')
+          ->leftJoin('AssignedRooms', 'Rooms.ID', '=', 'AssignedRooms.RoomID')
+          ->leftJoin('BookingDetails', 'AssignedRooms.BookingDetailID', '=', 'BookingDetails.ID')
+          ->leftJoin('users', 'BookingDetails.UserID', '=', 'users.id')
+          ->select(
+            'Rooms.ID',
+            'Rooms.RoomName',
+            'Rooms.Floor',
+            'RoomTypes.RoomTypeName',
+            'RoomSizes.RoomSizeName',
+            \DB::raw('IFNULL(users.name, "") as Occupant'),
+            \DB::raw('"Available" as status')
+          )
+          ->whereNotIn('Rooms.ID', function ($q) use ($currentDate) {
+            $q->select('RoomID')
+              ->from('AssignedRooms')
+              ->join('BookingDetails', 'AssignedRooms.BookingDetailID', '=', 'BookingDetails.ID')
+              ->whereIn('BookingDetails.BookingStatus', ['Confirmed', 'Ongoing'])
+              ->where('BookingDetails.CheckInDate', '<=', $currentDate->endOfDay())
+              ->where('BookingDetails.CheckOutDate', '>=', $currentDate->startOfDay());
+          });
+
+        if ($search) {
+          $query->where(function ($q) use ($search) {
+            $q->where('Rooms.RoomName', 'like', '%' . $search . '%')
+              ->orWhere('RoomTypes.RoomTypeName', 'like', '%' . $search . '%')
+              ->orWhere('RoomSizes.RoomSizeName', 'like', '%' . $search . '%')
+              ->orWhere('Rooms.Floor', 'like', '%' . $search . '%')
+              ->orWhere('users.name', 'like', '%' . $search . '%');
+          });
+        }
+
+        if ($sort === 'RoomName') {
+          $query->orderByRaw("CAST(SUBSTRING_INDEX(Rooms.RoomName, '-', 1) AS UNSIGNED) $direction")
+            ->orderByRaw("CAST(SUBSTRING_INDEX(Rooms.RoomName, '-', -1) AS UNSIGNED) $direction");
+        } elseif ($sort === 'RoomTypeName') {
+          $query->orderBy('RoomTypes.RoomTypeName', $direction);
+        } elseif ($sort === 'RoomSizeName') {
+          $query->orderBy('RoomSizes.RoomSizeName', $direction);
+        } elseif ($sort === 'Floor') {
+          $query->orderBy('Rooms.Floor', $direction);
+        } elseif ($sort === 'status') {
+          $query->orderBy('status', $direction);
+        } elseif ($sort === 'Occupant') {
+          $query->orderBy('Occupant', $direction);
+        }
+
+        $reservations = $query->groupBy(
+          'Rooms.ID',
+          'Rooms.RoomName',
+          'Rooms.Floor',
+          'RoomTypes.RoomTypeName',
+          'RoomSizes.RoomSizeName',
+          'users.name'
+        )->paginate($perPage, ['*'], $pageName)->appends([
+          'search' => $search,
+          'sort' => $sort,
+          'direction' => $direction,
+          'tab' => $tab,
+        ]);
+        break;
+      case 'all':
+        $query = Room::join('RoomTypes', 'Rooms.RoomTypeID', '=', 'RoomTypes.ID')
+          ->join('RoomSizes', 'Rooms.RoomSizeID', '=', 'RoomSizes.ID')
+          ->leftJoin('AssignedRooms', 'Rooms.ID', '=', 'AssignedRooms.RoomID')
+          ->leftJoin('BookingDetails', 'AssignedRooms.BookingDetailID', '=', 'BookingDetails.ID')
+          ->leftJoin('users', 'BookingDetails.UserID', '=', 'users.id')
+          ->select(
+            'Rooms.ID',
+            'Rooms.RoomName',
+            'Rooms.Floor',
+            'RoomTypes.RoomTypeName',
+            'RoomSizes.RoomSizeName',
+            \DB::raw('IFNULL(users.name, "") as Occupant'),
+            \DB::raw('CASE
+                        WHEN BookingDetails.BookingStatus = "Confirmed" THEN "Pending"
+                        WHEN BookingDetails.BookingStatus = "Ongoing" THEN "Occupied"
+                        ELSE "Available"
+                      END as status')
+          );
+
+        if ($search) {
+          $query->where(function ($q) use ($search) {
+            $q->where('Rooms.RoomName', 'like', '%' . $search . '%')
+              ->orWhere('RoomTypes.RoomTypeName', 'like', '%' . $search . '%')
+              ->orWhere('RoomSizes.RoomSizeName', 'like', '%' . $search . '%')
+              ->orWhere('Rooms.Floor', 'like', '%' . $search . '%')
+              ->orWhere('users.name', 'like', '%' . $search . '%');
+          });
+        }
+
+        if ($sort === 'RoomName') {
+          $query->orderByRaw("CAST(SUBSTRING_INDEX(Rooms.RoomName, '-', 1) AS UNSIGNED) $direction")
+            ->orderByRaw("CAST(SUBSTRING_INDEX(Rooms.RoomName, '-', -1) AS UNSIGNED) $direction");
+        } elseif ($sort === 'RoomTypeName') {
+          $query->orderBy('RoomTypes.RoomTypeName', $direction);
+        } elseif ($sort === 'RoomSizeName') {
+          $query->orderBy('RoomSizes.RoomSizeName', $direction);
+        } elseif ($sort === 'Floor') {
+          $query->orderBy('Rooms.Floor', $direction);
+        } elseif ($sort === 'status') {
+          $query->orderBy('status', $direction);
+        } elseif ($sort === 'Occupant') {
+          $query->orderBy('Occupant', $direction);
+        }
+
+        $reservations = $query->groupBy(
+          'Rooms.ID',
+          'Rooms.RoomName',
+          'Rooms.Floor',
+          'RoomTypes.RoomTypeName',
+          'RoomSizes.RoomSizeName',
+          'users.name',
+          'BookingDetails.BookingStatus'
+        )->paginate($perPage, ['*'], $pageName)->appends([
+          'search' => $search,
+          'sort' => $sort,
+          'direction' => $direction,
+          'tab' => $tab,
+        ]);
+        break;
+      default:
+        abort(404);
     }
 
-    // Modified: Fix sorting for status and Occupant
-    if ($sort === 'RoomName') {
-      $query->orderByRaw("CAST(SUBSTRING_INDEX(RoomName, '-', 1) AS UNSIGNED) $direction")
-        ->orderByRaw("CAST(SUBSTRING_INDEX(RoomName, '-', -1) AS UNSIGNED) $direction");
-    } elseif ($sort === 'RoomTypeName') {
-      $query->orderBy('RoomTypes.RoomTypeName', $direction);
-    } elseif ($sort === 'RoomSizeName') {
-      $query->orderBy('RoomSizes.RoomSizeName', $direction);
-    } elseif ($sort === 'Floor') {
-      $query->orderBy('Rooms.Floor', $direction);
-    } elseif ($sort === 'status') {
-      $query->orderBy('status', $direction);
-    } elseif ($sort === 'Occupant') {
-      $query->orderBy('Occupant', $direction);
-    }
-    // End Modified
-
-    \DB::enableQueryLog();
-    $allRooms = $query->paginate($perPage, ['*'], 'all_page')->appends([
-      'search' => $search,
-      'sort' => $sort,
-      'direction' => $direction,
-    ]);
-
-    // Modified: Simplified transform to ensure consistency
-    $allRooms->getCollection()->transform(function ($room) {
-      $room->status = $room->status ?: 'Available';
-      $room->Occupant = $room->Occupant ?: '';
-      return $room;
-    });
-    \Log::info('All Rooms Query', \DB::getQueryLog());
-    \DB::disableQueryLog();
-
-    \DB::enableQueryLog();
-    $availableQuery = clone $query;
-    $availableRooms = $availableQuery->whereNotIn('Rooms.ID', function ($q) use ($currentDate) {
-      $q->select('RoomID')
-        ->from('AssignedRooms')
-        ->join('BookingDetails', 'AssignedRooms.BookingDetailID', '=', 'BookingDetails.ID')
-        ->whereIn('BookingDetails.BookingStatus', ['Confirmed', 'Ongoing'])
-        ->where('BookingDetails.CheckInDate', '<=', $currentDate->endOfDay())
-        ->where('BookingDetails.CheckOutDate', '>=', $currentDate->startOfDay());
-    })->paginate($perPage, ['*'], 'available_page')->appends([
-      'search' => $search,
-      'sort' => $sort,
-      'direction' => $direction,
-    ]);
-
-    $availableRooms->getCollection()->transform(function ($room) {
-      $room->status = 'Available';
-      $room->Occupant = '';
-      return $room;
-    });
-    \Log::info('Available Rooms Query', \DB::getQueryLog());
-    \DB::disableQueryLog();
-
-    \DB::enableQueryLog();
-    $occupiedQuery = AssignedRoom::join('Rooms', 'AssignedRooms.RoomID', '=', 'Rooms.ID')
-      ->join('BookingDetails', 'AssignedRooms.BookingDetailID', '=', 'BookingDetails.ID')
-      ->join('RoomTypes', 'Rooms.RoomTypeID', '=', 'RoomTypes.ID')
-      ->join('RoomSizes', 'Rooms.RoomSizeID', '=', 'RoomSizes.ID')
-      ->leftJoin('users', 'BookingDetails.UserID', '=', 'users.id')
-      ->select(
-        'Rooms.ID',
-        'Rooms.RoomName',
-        'Rooms.Floor',
-        'RoomTypes.RoomTypeName',
-        'RoomSizes.RoomSizeName',
-        \DB::raw('IFNULL(users.name, "") as Occupant'),
-        \DB::raw('CASE BookingDetails.BookingStatus
-                    WHEN "Confirmed" THEN "Pending"
-                    WHEN "Ongoing" THEN "Occupied"
-                    ELSE "Unknown"
-                  END as status')
-      )
-      ->whereIn('BookingDetails.BookingStatus', ['Confirmed', 'Ongoing'])
-      ->where('BookingDetails.CheckInDate', '<=', $currentDate->endOfDay())
-      ->where('BookingDetails.CheckOutDate', '>=', $currentDate->startOfDay());
-
-    if ($search) {
-      $occupiedQuery->where(function ($q) use ($search) {
-        $q->where('Rooms.RoomName', 'like', '%' . $search . '%')
-          ->orWhere('RoomTypes.RoomTypeName', 'like', '%' . $search . '%')
-          ->orWhere('RoomSizes.RoomSizeName', 'like', '%' . $search . '%')
-          ->orWhere('Rooms.Floor', 'like', '%' . $search . '%')
-          ->orWhere('users.name', 'like', '%' . $search . '%');
-      });
+    if ($request->ajax()) {
+      return response()->json([
+        'html' => view("admin.partials.rooms.tab_{$tab}", compact('reservations', 'search', 'sort', 'direction'))->render()
+      ]);
     }
 
-    // Modified: Fix Occupant sorting
-    if ($sort === 'RoomName') {
-      $occupiedQuery->orderByRaw("CAST(SUBSTRING_INDEX(Rooms.RoomName, '-', 1) AS UNSIGNED) $direction")
-        ->orderByRaw("CAST(SUBSTRING_INDEX(Rooms.RoomName, '-', -1) AS UNSIGNED) $direction");
-    } elseif ($sort === 'RoomTypeName') {
-      $occupiedQuery->orderBy('RoomTypes.RoomTypeName', $direction);
-    } elseif ($sort === 'RoomSizeName') {
-      $occupiedQuery->orderBy('RoomSizes.RoomSizeName', $direction);
-    } elseif ($sort === 'Floor') {
-      $occupiedQuery->orderBy('Rooms.Floor', $direction);
-    } elseif ($sort === 'status') {
-      $occupiedQuery->orderBy('status', $direction);
-    } elseif ($sort === 'Occupant') {
-      $occupiedQuery->orderBy('Occupant', $direction);
-    }
-    // End Modified
-
-    $occupiedRooms = $occupiedQuery->groupBy(
-      'Rooms.ID',
-      'Rooms.RoomName',
-      'Rooms.Floor',
-      'RoomTypes.RoomTypeName',
-      'RoomSizes.RoomSizeName',
-      'users.name',
-      'BookingDetails.BookingStatus'
-    )->paginate($perPage, ['*'], 'occupied_page')->appends([
-      'search' => $search,
-      'sort' => $sort,
-      'direction' => $direction,
-    ]);
-
-    \Log::info('Occupied Rooms Query', \DB::getQueryLog());
-    \DB::disableQueryLog();
-
-    return view('admin.rooms', [
-      'allRooms' => $allRooms,
-      'availableRooms' => $availableRooms,
-      'occupiedRooms' => $occupiedRooms,
-      'search' => $search,
-      'sort' => $sort,
-      'direction' => $direction,
-    ]);
+    return view('admin.rooms', compact('reservations', 'search', 'sort', 'direction', 'tab'));
   }
 
-  public function frontDesk() {
+  public function viewFrontDesk() {
     return view('admin.frontdesk');
   }
 
-  public function deals() {
+  public function viewDeals() {
     return view('admin.deals');
   }
 
-  public function rate() {
+  public function viewRate() {
     return view('admin.rate');
   }
 
-  public function createBooking() {
+  public function viewBooking() {
     return view('admin.booking');
+  }
+
+  public function viewUserManagement(Request $request) {
+    $search = $request->input('search');
+    $sort = $request->input('sort', 'Name');
+    $direction = $request->input('direction', 'asc');
+    $perPage = 30;
+    $tab = $request->input('tab', 'staff');
+
+    $validSortColumns = ['Name', 'Role', 'email', 'created_at', 'updated_at'];
+    if (!in_array($sort, $validSortColumns)) {
+      $sort = 'Name';
+    }
+
+    $query = User::query();
+
+    if ($search) {
+      $query->where(function ($q) use ($search) {
+        $q->where('Name', 'like', '%' . $search . '%')
+          ->orWhere('Username', 'like', '%' . $search . '%')
+          ->orWhere('email', 'like', '%' . $search . '%');
+      });
+    }
+
+    if ($tab === 'staff') {
+      $query->where('Role', '!=', 'Customer');
+    } elseif ($tab === 'customers') {
+      $query->where('Role', 'Customer');
+    } else {
+      abort(404);
+    }
+
+    $query->orderBy($sort, $direction);
+
+    $users = $query->paginate($perPage)->appends([
+      'search' => $search,
+      'sort' => $sort,
+      'direction' => $direction,
+      'tab' => $tab,
+    ]);
+
+    if ($request->ajax()) {
+      return response()->json([
+        'html' => view("admin.partials.usermanagement.tab_{$tab}", compact('users', 'search', 'sort', 'direction'))->render()
+      ]);
+    }
+    return view('admin.usermanagement', compact('users', 'search', 'sort', 'direction', 'tab'));
+  }
+
+
+  public function addStaff(Request $request) {
+    $validated = $request->validate([
+      'Name' => 'required|string|max:255',
+      'Role' => ['required', Rule::in(['Admin'])],
+      'email' => 'required|email|unique:users',
+      'password' => 'required|min:6|confirmed',
+    ]);
+
+    $user = User::create([
+      'Name' => $validated['Name'],
+      'Username' => strtolower(str_replace(' ', '_', $validated['Name'])),
+      'Role' => $validated['Role'],
+      'email' => $validated['email'],
+      'password' => Hash::make($validated['password']),
+    ]);
+
+    return response()->json([
+      'status' => 'success',
+      'message' => 'Staff added successfully!',
+    ]);
+  }
+
+  public function updateUser(Request $request, $id) {
+    $user = User::findOrFail($id);
+
+    $validated = $request->validate([
+      'Name' => 'required|string|max:255',
+      'Role' => ['required', Rule::in(['Admin', 'Customer'])],
+      'email' => 'required|email|unique:users,email,' . $id,
+      'password' => 'nullable|min:6|confirmed',
+    ]);
+
+    $user->Name = $validated['Name'];
+    $user->Role = $validated['Role'];
+    $user->email = $validated['email'];
+    if (!empty($validated['password'])) {
+      $user->password = Hash::make($validated['password']);
+    }
+    $user->save();
+
+    return response()->json([
+      'status' => 'success',
+      'message' => 'User updated successfully!',
+    ]);
+  }
+
+  public function deleteUser($id) {
+    $user = User::findOrFail($id);
+    $user->delete();
+
+    return response()->json([
+      'status' => 'success',
+      'message' => 'User deleted successfully!',
+    ]);
   }
 }

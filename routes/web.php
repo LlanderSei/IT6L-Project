@@ -30,13 +30,17 @@ Route::middleware('RestrictByRole:Customer,Cashier')->group(function () {
 });
 
 Route::prefix('/admin')->name('admin.')->middleware('RestrictByRole:Admin')->group(function () {
-  Route::get('/', [AdminController::class, 'Dashboard'])->name('dashboard');
-  Route::get('/master-dashboard', [AdminController::class, 'masterDashboard'])->name('master_dashboard');
-  Route::get('/frontdesk', [AdminController::class, 'frontDesk'])->name('frontdesk');
-  Route::get('/guest', [AdminController::class, 'guest'])->name('guest');
-  Route::get('/rooms', [AdminController::class, 'rooms'])->name('rooms');
-  Route::get('/deals', [AdminController::class, 'deals'])->name('deals');
-  Route::get('/rate', [AdminController::class, 'rate'])->name('rate');
+  Route::get('/', [AdminController::class, 'viewDashboard'])->name('dashboard');
+  Route::get('/master-dashboard', [AdminController::class, 'viewMasterDashboard'])->name('master_dashboard');
+  Route::get('/frontdesk', [AdminController::class, 'viewFrontDesk'])->name('frontdesk');
+  Route::get('/guest', [AdminController::class, 'viewGuest'])->name('guest');
+  Route::get('/rooms', [AdminController::class, 'viewRooms'])->name('rooms');
+  Route::get('/deals', [AdminController::class, 'viewDeals'])->name('deals');
+  Route::get('/rate', [AdminController::class, 'viewRate'])->name('rate');
+  Route::get('/users', [AdminController::class, 'viewUserManagement'])->name('usermanagement');
+  Route::post('/users', [AdminController::class, 'addStaff'])->name('addStaff');
+  Route::patch('/users/{id}', [AdminController::class, 'updateUser'])->name('updateUser');
+  Route::delete('/users/{id}', [AdminController::class, 'deleteUser'])->name('deleteUser');
 
   Route::get('booking/{id}/review', [ReservationActionsController::class, 'reviewBooking'])->name('booking.review');
   Route::patch('booking/{id}/accept', [ReservationActionsController::class, 'acceptPayment'])->name('booking.accept');

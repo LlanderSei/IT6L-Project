@@ -1,4 +1,4 @@
-@extends('layouts.admin_layout')
+@extends('layouts.admin')
 @section('title', 'Front Desk')
 @section('content')
     <h1 class="main-text">Front Desk</h1>

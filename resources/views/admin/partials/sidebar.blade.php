@@ -34,6 +34,12 @@
       <i class="bi bi-currency-dollar"></i> Rate
     </a>
   </li>
+  <li class="nav-item">
+    <a class="nav-link {{ Route::is('admin.usermanagement') ? 'active' : '' }}"
+      href="{{ route('admin.usermanagement') }}">
+      <i class="bi bi-person-lines-fill"></i> User Management
+    </a>
+  </li>
   <li class="nav-item mt-4">
     <div class="nav-link">
       <form action="{{ route('logout') }}" method="POST">
