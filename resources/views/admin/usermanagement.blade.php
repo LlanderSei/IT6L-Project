@@ -18,13 +18,6 @@
           </form>
         </div>
 
-        <!-- Add Staff Button (only for staff tab) -->
-        @if ($tab === 'staff')
-          <div class="mb-3">
-            <button class="btn btn-custom" data-bs-toggle="modal" data-bs-target="#addStaffModal">Add Staff</button>
-          </div>
-        @endif
-
         <!-- Tabs -->
         <ul class="nav nav-tabs" id="userTabs" role="tablist">
           <li class="nav-item" role="presentation">
@@ -62,25 +55,30 @@
             <div class="mb-3">
               <label for="Name" class="form-label">Name</label>
               <input type="text" class="form-control" id="Name" name="Name" required>
+              <div class="invalid-feedback" id="Name-error"></div>
             </div>
             <div class="mb-3">
               <label for="Role" class="form-label">Role</label>
               <select class="form-select" id="Role" name="Role" required>
                 <option value="Admin">Admin</option>
               </select>
+              <div class="invalid-feedback" id="Role-error"></div>
             </div>
             <div class="mb-3">
               <label for="email" class="form-label">Email</label>
               <input type="email" class="form-control" id="email" name="email" required>
+              <div class="invalid-feedback" id="email-error"></div>
             </div>
             <div class="mb-3">
               <label for="password" class="form-label">Password</label>
               <input type="password" class="form-control" id="password" name="password" required>
+              <div class="invalid-feedback" id="password-error"></div>
             </div>
             <div class="mb-3">
               <label for="password_confirmation" class="form-label">Confirm Password</label>
               <input type="password" class="form-control" id="password_confirmation" name="password_confirmation"
                 required>
+              <div class="invalid-feedback" id="password_confirmation-error"></div>
             </div>
             <button type="submit" class="btn btn-custom">Add Staff</button>
           </form>
@@ -105,25 +103,30 @@
             <div class="mb-3">
               <label for="edit_Name" class="form-label">Name</label>
               <input type="text" class="form-control" id="edit_Name" name="Name" required>
+              <div class="invalid-feedback" id="edit_Name-error"></div>
             </div>
             <div class="mb-3">
               <label for="edit_Role" class="form-label">Role</label>
               <select class="form-select" id="edit_Role" name="Role" required>
                 <option value="Admin">Admin</option>
               </select>
+              <div class="invalid-feedback" id="edit_Role-error"></div>
             </div>
             <div class="mb-3">
               <label for="edit_email" class="form-label">Email</label>
               <input type="email" class="form-control" id="edit_email" name="email" required>
+              <div class="invalid-feedback" id="edit_email-error"></div>
             </div>
             <div class="mb-3">
               <label for="edit_password" class="form-label">New Password (optional)</label>
               <input type="password" class="form-control" id="edit_password" name="password">
+              <div class="invalid-feedback" id="edit_password-error"></div>
             </div>
             <div class="mb-3">
               <label for="edit_password_confirmation" class="form-label">Confirm New Password</label>
               <input type="password" class="form-control" id="edit_password_confirmation"
                 name="password_confirmation">
+              <div class="invalid-feedback" id="edit_password_confirmation-error"></div>
             </div>
             <button type="submit" class="btn btn-custom">Save Changes</button>
           </form>
@@ -188,13 +191,40 @@
         });
       }
 
+      // Function to show toast messages
+      function showToast(type, message) {
+        const toastContainer = document.getElementById('toastContainer');
+        const bgClass = type === 'success' ? 'text-bg-success' : type === 'error' ? 'text-bg-danger' :
+          'text-bg-warning';
+        const toastHTML = `
+          <div class="toast align-items-center ${bgClass} border-0" role="alert" aria-live="assertive"
+            aria-atomic="true" data-bs-autohide="true" data-bs-delay="3000">
+            <div class="d-flex">
+              <div class="toast-body text-center">
+                ${message}
+              </div>
+              <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+                aria-label="Close"></button>
+            </div>
+          </div>
+        `;
+        toastContainer.innerHTML += toastHTML;
+        const toast = toastContainer.lastElementChild;
+        new bootstrap.Toast(toast).show();
+      }
+
       // Handle Add Staff Form
       const addStaffForm = document.getElementById('addStaffForm');
       if (addStaffForm) {
-        addStaffForm.addEventListener('submit', function(e) {
+        addStaffForm.addEventListener('submit', async function(e) {
           e.preventDefault();
+          // Clear previous errors
+          document.querySelectorAll('#addStaffModal .invalid-feedback').forEach(el => el.textContent = '');
+          document.querySelectorAll('#addStaffModal .form-control, #addStaffModal .form-select').forEach(el =>
+            el.classList.remove('is-invalid'));
           const formData = new FormData(this);
-          fetch(this.action, {
+          try {
+            const response = await fetch(this.action, {
               method: 'POST',
               body: formData,
               headers: {
@@ -202,17 +232,29 @@
                 'Accept': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
               }
-            })
-            .then(res => res.json())
-            .then(data => {
-              if (data.status === 'success') {
-                bootstrap.Modal.getInstance(document.getElementById('addStaffModal')).hide();
-                loadTabContent('staff');
+            });
+            const data = await response.json();
+            if (data.status === 'success') {
+              bootstrap.Modal.getInstance(document.getElementById('addStaffModal')).hide();
+              showToast('success', data.message);
+              loadTabContent('staff');
+            } else {
+              if (response.status === 422 && data.errors) {
+                Object.keys(data.errors).forEach(key => {
+                  const errorElement = document.getElementById(`${key}-error`);
+                  const inputElement = addStaffForm.querySelector(`[name="${key}"]`);
+                  if (errorElement && inputElement) {
+                    errorElement.textContent = data.errors[key][0];
+                    inputElement.classList.add('is-invalid');
+                  }
+                });
               } else {
-                alert(data.message || 'Error adding staff.');
+                showToast('error', data.message || 'Error adding staff.');
               }
-            })
-            .catch(error => console.error('Error:', error));
+            }
+          } catch (error) {
+            showToast('error', 'An error occurred. Please try again.');
+          }
         });
       }
 
@@ -232,28 +274,45 @@
       // Handle Edit Form Submit
       const editForm = document.getElementById('editForm');
       if (editForm) {
-        editForm.addEventListener('submit', function(e) {
+        editForm.addEventListener('submit', async function(e) {
           e.preventDefault();
+          // Clear previous errors
+          document.querySelectorAll('#editModal .invalid-feedback').forEach(el => el.textContent = '');
+          document.querySelectorAll('#editModal .form-control, #editModal .form-select').forEach(el => el
+            .classList.remove('is-invalid'));
           const formData = new FormData(this);
-          fetch(this.action, {
-              method: 'POST',
+          try {
+            const response = await fetch(this.action, {
+              method: 'PATCH',
               body: formData,
               headers: {
                 'X-Requested-With': 'XMLHttpRequest',
                 'Accept': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
               }
-            })
-            .then(res => res.json())
-            .then(data => {
-              if (data.status === 'success') {
-                bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
-                loadTabContent(document.querySelector('.nav-link.active').dataset.tab);
+            });
+            const data = await response.json();
+            if (data.status === 'success') {
+              bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+              showToast('success', data.message);
+              loadTabContent(document.querySelector('.nav-link.active').dataset.tab);
+            } else {
+              if (response.status === 422 && data.errors) {
+                Object.keys(data.errors).forEach(key => {
+                  const errorElement = document.getElementById(`edit_${key}-error`);
+                  const inputElement = editForm.querySelector(`[name="${key}"]`);
+                  if (errorElement && inputElement) {
+                    errorElement.textContent = data.errors[key][0];
+                    inputElement.classList.add('is-invalid');
+                  }
+                });
               } else {
-                alert(data.message || 'Error updating user.');
+                showToast('error', data.message || 'Error updating user.');
               }
-            })
-            .catch(error => console.error('Error:', error));
+            }
+          } catch (error) {
+            showToast('error', 'An error occurred. Please try again.');
+          }
         });
       }
 
@@ -269,25 +328,27 @@
       // Handle Confirm Delete
       const confirmDelete = document.getElementById('confirmDelete');
       if (confirmDelete) {
-        confirmDelete.addEventListener('click', function() {
-          fetch(`/admin/users/${deleteId}`, {
+        confirmDelete.addEventListener('click', async function() {
+          try {
+            const response = await fetch(`/admin/users/${deleteId}`, {
               method: 'DELETE',
               headers: {
                 'X-Requested-With': 'XMLHttpRequest',
                 'Accept': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
               }
-            })
-            .then(res => res.json())
-            .then(data => {
-              if (data.status === 'success') {
-                bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
-                loadTabContent(document.querySelector('.nav-link.active').dataset.tab);
-              } else {
-                alert(data.message || 'Error deleting user.');
-              }
-            })
-            .catch(error => console.error('Error:', error));
+            });
+            const data = await response.json();
+            if (data.status === 'success') {
+              bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+              showToast('success', data.message);
+              loadTabContent(document.querySelector('.nav-link.active').dataset.tab);
+            } else {
+              showToast('error', data.message || 'Error deleting user.');
+            }
+          } catch (error) {
+            showToast('error', 'An error occurred. Please try again.');
+          }
         });
       }
 

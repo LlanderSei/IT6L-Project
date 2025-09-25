@@ -18,16 +18,55 @@
   </head>
 
   <body>
-    <div class="container-fluid p-0">
+    <div class="container-fluid">
       <div class="row">
         <nav class="col-md-2 col-12 sidebar">
           @include('admin.partials.sidebar')
         </nav>
-        <main class="col-md-9 col-10 content ps-5">
+        <main class="col-8 content p-3">
           @yield('content')
         </main>
       </div>
     </div>
+
+    <!-- Toast Container -->
+    <div class="position-fixed bottom-0 start-50 translate-middle-x p-3" style="z-index: 9999;" id="toastContainer">
+      @if (session('toast_success'))
+        <div class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive"
+          aria-atomic="true" data-bs-autohide="true" data-bs-delay="3000">
+          <div class="d-flex">
+            <div class="toast-body text-center">
+              {{ session('toast_success') }}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+              aria-label="Close"></button>
+          </div>
+        </div>
+      @elseif (session('toast_error'))
+        <div class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive"
+          aria-atomic="true" data-bs-autohide="true" data-bs-delay="3000">
+          <div class="d-flex">
+            <div class="toast-body text-center">
+              {{ session('toast_error') }}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+              aria-label="Close"></button>
+          </div>
+        </div>
+      @elseif(session('toast_info'))
+        <div class="toast align-items-center text-bg-warning border-0" role="alert" aria-live="assertive"
+          aria-atomic="true" data-bs-autohide="true" data-bs-delay="3000">
+          <div class="d-flex">
+            <div class="toast-body text-center">
+              {{ session('toast_info') }}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+              aria-label="Close"></button>
+          </div>
+        </div>
+      @endif
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
       document.addEventListener('DOMContentLoaded', function() {
@@ -37,6 +76,15 @@
             link.classList.add('active');
           }
         });
+
+        // Initialize toasts
+        const toastContainer = document.getElementById('toastContainer');
+        if (toastContainer) {
+          const toasts = toastContainer.querySelectorAll('.toast');
+          toasts.forEach(toast => {
+            new bootstrap.Toast(toast).show();
+          });
+        }
       });
     </script>
     @yield('scripts')

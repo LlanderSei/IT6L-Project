@@ -1,5 +1,8 @@
 <div class="card p-3 mb-3">
-  <h4>Staffs</h4>
+  <div class="d-flex justify-content-between mb-3"">
+    <h4>Staffs</h4>
+    <button class="btn btn-custom" data-bs-toggle="modal" data-bs-target="#addStaffModal">Add Staff</button>
+  </div>
   <table class="table table-hover">
     <thead>
       <tr>
@@ -60,10 +63,11 @@
           <td>{{ $user->created_at->format('Y-m-d H:i:s') }}</td>
           <td>{{ $user->updated_at->format('Y-m-d H:i:s') }}</td>
           <td>
-            <button class="btn btn-sm btn-custom edit-btn" data-id="{{ $user->id }}"
-              data-name="{{ $user->Name }}" data-role="{{ $user->Role }}"
-              data-email="{{ $user->email }}">Edit</button>
-            <button class="btn btn-sm btn-danger delete-btn" data-id="{{ $user->id }}">Delete</button>
+            <button class="btn btn-sm btn-warning edit-btn" data-id="{{ $user->id }}"
+              data-name="{{ $user->Name }}" data-role="{{ $user->Role }}" data-email="{{ $user->email }}"><i
+                class="bi bi-pencil-square"></i></button>
+            <button class="btn btn-sm btn-danger delete-btn" data-id="{{ $user->id }}"><i
+                class="bi bi-trash3"></i></button>
           </td>
         </tr>
       @empty
