@@ -1,5 +1,5 @@
 <div class="card p-3 mb-3">
-  <div class="d-flex justify-content-between mb-3"">
+  <div class="d-flex justify-content-between mb-3">
     <h4>Staffs</h4>
     <button class="btn btn-custom" data-bs-toggle="modal" data-bs-target="#addStaffModal">Add Staff</button>
   </div>
@@ -60,14 +60,18 @@
           <td>{{ $user->Name }}</td>
           <td>{{ $user->Role }}</td>
           <td>{{ $user->email }}</td>
-          <td>{{ $user->created_at->format('Y-m-d H:i:s') }}</td>
-          <td>{{ $user->updated_at->format('Y-m-d H:i:s') }}</td>
+          <td>{{ $user->created_at->format('Y-m-d H:i:s') ?? 'None' }}</td>
+          <td>{{ $user->updated_at->format('Y-m-d H:i:s') ?? 'None' }}</td>
           <td>
+            <!-- Modified: Changed data attributes to lowercase for consistency with JS dataset -->
             <button class="btn btn-sm btn-warning edit-btn" data-id="{{ $user->id }}"
               data-name="{{ $user->Name }}" data-role="{{ $user->Role }}" data-email="{{ $user->email }}"><i
                 class="bi bi-pencil-square"></i></button>
-            <button class="btn btn-sm btn-danger delete-btn" data-id="{{ $user->id }}"><i
-                class="bi bi-trash3"></i></button>
+            @if ($user->id != Auth::id())
+              <button class="btn btn-sm btn-danger delete-btn" data-id="{{ $user->id }}"><i
+                  class="bi bi-trash3"></i></button>
+            @endif
+            <!-- End Modified -->
           </td>
         </tr>
       @empty

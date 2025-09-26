@@ -61,6 +61,7 @@
               <label for="Role" class="form-label">Role</label>
               <select class="form-select" id="Role" name="Role" required>
                 <option value="Admin">Admin</option>
+                <option value="Manager">Manager</option>
               </select>
               <div class="invalid-feedback" id="Role-error"></div>
             </div>
@@ -109,6 +110,7 @@
               <label for="edit_Role" class="form-label">Role</label>
               <select class="form-select" id="edit_Role" name="Role" required>
                 <option value="Admin">Admin</option>
+                <option value="Manager">Manager</option>
               </select>
               <div class="invalid-feedback" id="edit_Role-error"></div>
             </div>
@@ -253,19 +255,44 @@
               }
             }
           } catch (error) {
-            showToast('error', 'An error occurred. Please try again.');
+            console.error('Add Staff AJAX Error:', error);
+            showToast('error', 'An error occurred while adding staff. Please try again.');
           }
+        });
+      }
+
+      // Clear validation on modal show
+      const addStaffModal = document.getElementById('addStaffModal');
+      if (addStaffModal) {
+        addStaffModal.addEventListener('show.bs.modal', function() {
+          document.querySelectorAll('#addStaffModal .invalid-feedback').forEach(el => el.textContent = '');
+          document.querySelectorAll('#addStaffModal .form-control, #addStaffModal .form-select').forEach(el => el
+            .classList.remove('is-invalid'));
+          addStaffForm.reset();
+        });
+      }
+
+      const editModal = document.getElementById('editModal');
+      if (editModal) {
+        editModal.addEventListener('show.bs.modal', function() {
+          document.querySelectorAll('#editModal .invalid-feedback').forEach(el => el.textContent = '');
+          document.querySelectorAll('#editModal .form-control, #editModal .form-select').forEach(el => el
+            .classList.remove('is-invalid'));
         });
       }
 
       // Handle Edit Button Click
       document.addEventListener('click', function(e) {
-        if (e.target.classList.contains('edit-btn')) {
-          const user = e.target.dataset;
-          document.getElementById('edit_id').value = user.id;
-          document.getElementById('edit_Name').value = user.name;
-          document.getElementById('edit_Role').value = user.role;
-          document.getElementById('edit_email').value = user.email;
+        const btn = e.target.closest('.edit-btn');
+        if (btn) {
+          const user = btn.dataset;
+          console.log('Edit Button Dataset:', user);
+          document.getElementById('edit_id').value = user.id || '';
+          document.getElementById('edit_Name').value = user.name || '';
+          document.getElementById('edit_Role').value = user.role || 'Admin';
+          document.getElementById('edit_email').value = user.email || '';
+          document.getElementById('edit_password').value = '';
+          document.getElementById('edit_password_confirmation').value = '';
           document.getElementById('editForm').action = `/admin/users/${user.id}`;
           bootstrap.Modal.getOrCreateInstance(document.getElementById('editModal')).show();
         }
@@ -280,38 +307,76 @@
           document.querySelectorAll('#editModal .invalid-feedback').forEach(el => el.textContent = '');
           document.querySelectorAll('#editModal .form-control, #editModal .form-select').forEach(el => el
             .classList.remove('is-invalid'));
+
+          // Create JSON payload
           const formData = new FormData(this);
+          const jsonData = {
+            _token: formData.get('_token'),
+            _method: 'PATCH',
+            id: formData.get('id'),
+            Name: formData.get('Name'),
+            Role: formData.get('Role'),
+            email: formData.get('email'),
+          };
+          if (formData.get('password')) {
+            jsonData.password = formData.get('password');
+            jsonData.password_confirmation = formData.get('password_confirmation');
+          }
+
+          // Debug: Log JSON payload
+          console.log('JSON Payload:', jsonData);
+
+          let currentTab = document.querySelector('.nav-link.active')?.dataset.tab;
+          if (currentTab === 'undefined' || !currentTab) {
+            currentTab = 'staff';
+          }
+
           try {
             const response = await fetch(this.action, {
-              method: 'PATCH',
-              body: formData,
+              method: 'POST', // Use POST with _method: PATCH
+              body: JSON.stringify(jsonData),
               headers: {
                 'X-Requested-With': 'XMLHttpRequest',
                 'Accept': 'application/json',
+                'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
               }
             });
+
+            console.log('Response Status:', response.status);
+            console.log('Response Headers:', [...response.headers.entries()]);
+
             const data = await response.json();
-            if (data.status === 'success') {
+            console.log('Response Data:', data);
+
+            if (response.ok && data.status === 'success') {
               bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
               showToast('success', data.message);
-              loadTabContent(document.querySelector('.nav-link.active').dataset.tab);
+              loadTabContent(currentTab);
             } else {
               if (response.status === 422 && data.errors) {
+                let errorMessages = [];
                 Object.keys(data.errors).forEach(key => {
                   const errorElement = document.getElementById(`edit_${key}-error`);
                   const inputElement = editForm.querySelector(`[name="${key}"]`);
                   if (errorElement && inputElement) {
                     errorElement.textContent = data.errors[key][0];
                     inputElement.classList.add('is-invalid');
+                    errorMessages.push(data.errors[key][0]);
+                  } else {
+                    console.log(`No error element or input found for key: ${key}`);
                   }
                 });
+                showToast('error', errorMessages.join(' ') || 'Validation failed. Please check the form.');
+              } else if (response.status === 419) {
+                showToast('error', 'CSRF token mismatch. Please refresh the page and try again.');
               } else {
                 showToast('error', data.message || 'Error updating user.');
               }
             }
           } catch (error) {
-            showToast('error', 'An error occurred. Please try again.');
+            console.error('Edit Form AJAX Error:', error);
+            showToast('error', 'An error occurred while updating user. Please try again.');
           }
         });
       }
@@ -319,8 +384,9 @@
       // Handle Delete Button Click
       let deleteId;
       document.addEventListener('click', function(e) {
-        if (e.target.classList.contains('delete-btn')) {
-          deleteId = e.target.dataset.id;
+        const btn = e.target.closest('.delete-btn');
+        if (btn) {
+          deleteId = btn.dataset.id;
           bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteModal')).show();
         }
       });
@@ -329,6 +395,11 @@
       const confirmDelete = document.getElementById('confirmDelete');
       if (confirmDelete) {
         confirmDelete.addEventListener('click', async function() {
+          let currentTab = document.querySelector('.nav-link.active')?.dataset.tab;
+          if (currentTab === 'undefined' || !currentTab) {
+            currentTab = 'staff';
+          }
+
           try {
             const response = await fetch(`/admin/users/${deleteId}`, {
               method: 'DELETE',
@@ -342,12 +413,13 @@
             if (data.status === 'success') {
               bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
               showToast('success', data.message);
-              loadTabContent(document.querySelector('.nav-link.active').dataset.tab);
+              loadTabContent(currentTab);
             } else {
               showToast('error', data.message || 'Error deleting user.');
             }
           } catch (error) {
-            showToast('error', 'An error occurred. Please try again.');
+            console.error('Delete AJAX Error:', error);
+            showToast('error', 'An error occurred while deleting user. Please try again.');
           }
         });
       }
@@ -366,10 +438,19 @@
           })
           .then(res => res.json())
           .then(data => {
-            tabContent.innerHTML = data.html;
+            if (data.html) {
+              tabContent.innerHTML = data.html;
+            } else {
+              tabContent.innerHTML = '<div class="alert alert-danger">Invalid response. Please try again.</div>';
+            }
           })
-          .catch(error => console.error('Error:', error));
+          .catch(error => {
+            console.error('Tab Content Error:', error);
+            tabContent.innerHTML =
+              '<div class="alert alert-danger">Failed to load tab content. Please try again.</div>';
+          });
       }
     });
   </script>
+  <!-- End Modified -->
 @endsection

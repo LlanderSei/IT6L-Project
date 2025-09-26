@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use App\Models\AssignedRoom;
 use App\Models\Booking;
@@ -422,6 +423,7 @@ class AdminController extends Controller {
         'html' => view("admin.partials.usermanagement.tab_{$tab}", compact('users', 'search', 'sort', 'direction'))->render()
       ]);
     }
+
     return view('admin.usermanagement', compact('users', 'search', 'sort', 'direction', 'tab'));
   }
 
@@ -429,7 +431,7 @@ class AdminController extends Controller {
   public function addStaff(Request $request) {
     $validated = $request->validate([
       'Name' => 'required|string|max:255',
-      'Role' => ['required', Rule::in(['Admin'])],
+      'Role' => ['required', Rule::in(['Admin', 'Manager'])],
       'email' => 'required|email|unique:users',
       'password' => 'required|min:6|confirmed',
     ]);
@@ -449,14 +451,31 @@ class AdminController extends Controller {
   }
 
   public function updateUser(Request $request, $id) {
+    // Debug: Log raw request content and parsed data
+    Log::debug('updateUser Raw Input:', ['content' => $request->getContent()]);
+    Log::debug('updateUser Parsed Data:', $request->all());
+
     $user = User::findOrFail($id);
 
-    $validated = $request->validate([
-      'Name' => 'required|string|max:255',
-      'Role' => ['required', Rule::in(['Admin', 'Customer'])],
-      'email' => 'required|email|unique:users,email,' . $id,
-      'password' => 'nullable|min:6|confirmed',
-    ]);
+    // Treat empty password as null
+    if ($request->input('password') === '') {
+      $request->merge(['password' => null]);
+    }
+    if ($request->input('password_confirmation') === '') {
+      $request->merge(['password_confirmation' => null]);
+    }
+
+    try {
+      $validated = $request->validate([
+        'Name' => 'required|string|max:255',
+        'Role' => ['required', Rule::in(['Admin', 'Manager'])],
+        'email' => 'required|email|unique:users,email,' . $id,
+        'password' => 'nullable|min:6|confirmed',
+      ]);
+    } catch (\Illuminate\Validation\ValidationException $e) {
+      Log::debug('updateUser Validation Errors:', $e->errors());
+      throw $e;
+    }
 
     $user->Name = $validated['Name'];
     $user->Role = $validated['Role'];
@@ -473,6 +492,13 @@ class AdminController extends Controller {
   }
 
   public function deleteUser($id) {
+    if ($id == Auth::id()) {
+      return response()->json([
+        'status' => 'error',
+        'message' => 'You cannot delete yourself!',
+      ], 403);
+    }
+
     $user = User::findOrFail($id);
     $user->delete();
 

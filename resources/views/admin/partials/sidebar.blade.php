@@ -9,22 +9,24 @@
       <i class="bi bi-house"></i> Dashboard
     </a>
   </li>
-  <li class="nav-item">
+  {{-- <li class="nav-item">
     <a class="nav-link {{ Route::is('admin.frontdesk') ? 'active' : '' }}" href="{{ route('admin.frontdesk') }}">
       <i class="bi bi-reception"></i> Front Desk
     </a>
-  </li>
+  </li> --}}
   <li class="nav-item">
-    <a class="nav-link {{ Route::is('admin.guest') ? 'active' : '' }}" href="{{ route('admin.guest') }}">
+    <a class="nav-link {{ Route::is('admin.guest') || request()->is('admin/guest*') ? 'active' : '' }}"
+      href="{{ route('admin.guest') }}">
       <i class="bi bi-person"></i> Guest
     </a>
   </li>
   <li class="nav-item">
-    <a class="nav-link {{ Route::is('admin.rooms') ? 'active' : '' }}" href="{{ route('admin.rooms') }}">
+    <a class="nav-link {{ Route::is('admin.rooms') || request()->is('admin/rooms*') ? 'active' : '' }}"
+      href="{{ route('admin.rooms') }}">
       <i class="bi bi-door-open"></i> Rooms
     </a>
   </li>
-  <li class="nav-item">
+  {{-- <li class="nav-item">
     <a class="nav-link {{ Route::is('admin.deals') ? 'active' : '' }}" href="{{ route('admin.deals') }}">
       <i class="bi bi-tag"></i> Deals
     </a>
@@ -33,9 +35,9 @@
     <a class="nav-link {{ Route::is('admin.rate') ? 'active' : '' }}" href="{{ route('admin.rate') }}">
       <i class="bi bi-currency-dollar"></i> Rate
     </a>
-  </li>
+  </li> --}}
   <li class="nav-item">
-    <a class="nav-link {{ Route::is('admin.usermanagement') ? 'active' : '' }}"
+    <a class="nav-link {{ Route::is('admin.usermanagement') || request()->is('admin/users*') ? 'active' : '' }}"
       href="{{ route('admin.usermanagement') }}">
       <i class="bi bi-person-lines-fill"></i> User Management
     </a>

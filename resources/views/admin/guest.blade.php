@@ -1,5 +1,7 @@
 @extends('layouts.admin')
+
 @section('title', 'Guest')
+
 @section('content')
   <div id="dynamic-content">
     <h1 class="h2 main-text">Guest</h1>
@@ -79,7 +81,7 @@
         if (link && (link.closest('.pagination') || link.closest('thead'))) {
           e.preventDefault();
           const url = new URL(link.href);
-          url.searchParams.set('tab', document.querySelector('.nav-link.active').dataset.tab);
+          url.searchParams.set('tab', document.querySelector('.nav-link.active')?.dataset.tab || 'pending');
           loadTabContent(null, url.toString());
         }
       });
@@ -90,7 +92,7 @@
           const formData = new FormData(this);
           const url = new URL(this.action);
           formData.forEach((value, key) => url.searchParams.set(key, value));
-          url.searchParams.set('tab', document.querySelector('.nav-link.active').dataset.tab);
+          url.searchParams.set('tab', document.querySelector('.nav-link.active')?.dataset.tab || 'pending');
           loadTabContent(null, url.toString());
         });
       }

@@ -60,8 +60,10 @@
           <td>{{ $user->created_at->format('Y-m-d H:i:s') }}</td>
           <td>{{ $user->updated_at->format('Y-m-d H:i:s') }}</td>
           <td>
-            <button class="btn btn-sm btn-danger delete-btn" data-id="{{ $user->id }}"><i
-                class="bi bi-trash3"></i></button>
+            @if ($user->id != Auth::id())
+              <button class="btn btn-sm btn-danger delete-btn" data-id="{{ $user->id }}"><i
+                  class="bi bi-trash3"></i></button>
+            @endif
           </td>
         </tr>
       @empty
