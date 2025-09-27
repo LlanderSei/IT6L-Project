@@ -41,15 +41,11 @@
             @include("admin.partials.rooms.tab_{$tab}")
           </div>
         </div>
-
-        <!-- Add Room Button (only for all tab, but shown always for simplicity) -->
-        <div class="mb-3">
-          <button class="btn btn-custom col-sm-12" data-bs-toggle="modal" data-bs-target="#addRoomModal">Add Room</button>
-        </div>
       </div>
     </div>
   </div>
 
+  <!-- Modified: Enhanced error handling and tab parameter preservation -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const tabs = document.querySelectorAll('#roomsTabs .nav-link');
@@ -71,7 +67,8 @@
         if (link && (link.closest('.pagination') || link.closest('thead'))) {
           e.preventDefault();
           const url = new URL(link.href);
-          url.searchParams.set('tab', document.querySelector('.nav-link.active').dataset.tab);
+          const activeTab = document.querySelector('.nav-link.active')?.dataset.tab || 'occupied';
+          url.searchParams.set('tab', activeTab);
           loadTabContent(null, url.toString());
         }
       });
@@ -82,29 +79,47 @@
           const formData = new FormData(this);
           const url = new URL(this.action);
           formData.forEach((value, key) => url.searchParams.set(key, value));
-          url.searchParams.set('tab', document.querySelector('.nav-link.active').dataset.tab);
+          const activeTab = document.querySelector('.nav-link.active')?.dataset.tab || 'occupied';
+          url.searchParams.set('tab', activeTab);
           loadTabContent(null, url.toString());
         });
       }
 
       function loadTabContent(tab, url = null) {
         if (!url) {
-          url = "{{ route('admin.rooms') }}?tab=" + tab;
+          url = "{{ route('admin.rooms') }}?tab=" + (tab || 'occupied');
           const search = searchForm.querySelector('input[name="search"]').value;
           if (search) url += "&search=" + encodeURIComponent(search);
         }
+        console.log('Loading tab content for URL:', url); // Debug: Log URL
         fetch(url, {
             headers: {
               'X-Requested-With': 'XMLHttpRequest',
               'Accept': 'application/json',
             }
           })
-          .then(res => res.json())
-          .then(data => {
-            tabContent.innerHTML = data.html;
+          .then(res => {
+            console.log('Response Status:', res.status); // Debug: Log status
+            if (!res.ok) {
+              throw new Error(`HTTP error! Status: ${res.status}`);
+            }
+            return res.json();
           })
-          .catch(error => console.error('Error:', error));
+          .then(data => {
+            console.log('Response Data:', data); // Debug: Log response data
+            if (data.html) {
+              tabContent.innerHTML = data.html;
+            } else {
+              tabContent.innerHTML = '<div class="alert alert-danger">Invalid response. Please try again.</div>';
+            }
+          })
+          .catch(error => {
+            console.error('Tab Content Error:', error);
+            tabContent.innerHTML =
+              '<div class="alert alert-danger">Failed to load tab content. Please try again.</div>';
+          });
       }
     });
   </script>
+  <!-- End Modified -->
 @endsection

@@ -11,7 +11,7 @@ class RoomSeeder extends Seeder {
    * Run the database seeds.
    */
   public function run(): void {
-    for ($i = 1; $i <= 10; $i++) {
+    for ($i = 1; $i <= 100; $i++) {
       for ($j = 1; $j <= 10; $j++) {
         DB::table('Rooms')->insertOrIgnore(
           [

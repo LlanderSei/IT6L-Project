@@ -31,6 +31,7 @@ Route::middleware('RestrictByRole:Customer,Cashier')->group(function () {
 
 Route::prefix('/admin')->name('admin.')->middleware('RestrictByRole:Admin')->group(function () {
   Route::get('/', [AdminController::class, 'viewDashboard'])->name('dashboard');
+  Route::get('/dashboard-data', [AdminController::class, 'getDashboardData'])->name('dashboard-data');
   Route::get('/master-dashboard', [AdminController::class, 'viewMasterDashboard'])->name('master_dashboard');
   Route::get('/frontdesk', [AdminController::class, 'viewFrontDesk'])->name('frontdesk');
   Route::get('/guest', [AdminController::class, 'viewGuest'])->name('guest');

@@ -107,7 +107,7 @@ class ReservationActionsController extends Controller {
         return redirect()->route('admin.guest')->with('toast_error', 'Booking must be confirmed to check in.');
       }
 
-      $booking->update(['BookingStatus' => 'Ongoing']);
+      $booking->update(['BookingStatus' => 'Ongoing', 'SettledCheckIn' => now()]);
       // Award loyalty points based on CashbackThresholds
       $user = $booking->user;
       $totalAmount = $booking->paymentInfo->TotalAmount;
@@ -159,7 +159,7 @@ class ReservationActionsController extends Controller {
         return redirect()->route('admin.guest')->with('toast_error', 'Booking must be ongoing to check out.');
       }
 
-      $booking->update(['BookingStatus' => 'Ended']);
+      $booking->update(['BookingStatus' => 'Ended', 'SettledCheckOut' => now()]);
       $booking->assignedRooms()->update(['Status' => 'Ended']);
 
       DB::commit();

@@ -4,53 +4,53 @@
   <h1 class="main-text">Dashboard</h1>
 
   <!-- Key Metrics Cards -->
-  <div class="row">
+  <div class="row" id="metrics-row">
     <div class="col-md-3 col-6 mb-3">
       <div class="card p-3 text-center">
         <h4>Check-in</h4>
-        <h2>0</h2>
+        <h2 id="check-in">0</h2>
       </div>
     </div>
     <div class="col-md-3 col-6 mb-3">
       <div class="card p-3 text-center">
         <h4>Check-out</h4>
-        <h2>0</h2>
+        <h2 id="check-out">0</h2>
       </div>
     </div>
     <div class="col-md-3 col-6 mb-3">
       <div class="card p-3 text-center">
         <h4>Total In Hotel</h4>
-        <h2>0</h2>
+        <h2 id="total-in-hotel">0</h2>
       </div>
     </div>
     <div class="col-md-3 col-6 mb-3">
       <div class="card p-3 text-center">
         <h4>Available Rooms</h4>
-        <h2>0</h2>
+        <h2 id="available-rooms">0</h2>
       </div>
     </div>
     <div class="col-md-3 col-6 mb-3">
       <div class="card p-3 text-center">
         <h4>Occupied Rooms</h4>
-        <h2>0</h2>
+        <h2 id="occupied-rooms">0</h2>
       </div>
     </div>
     <div class="col-md-3 col-6 mb-3">
       <div class="card p-3 text-center">
         <h4>Revenue Today</h4>
-        <h2>$0</h2>
+        <h2 id="revenue-today">₱0</h2>
       </div>
     </div>
     <div class="col-md-3 col-6 mb-3">
       <div class="card p-3 text-center">
         <h4>Monthly Revenue</h4>
-        <h2>$0</h2>
+        <h2 id="monthly-revenue">₱0</h2>
       </div>
     </div>
     <div class="col-md-3 col-6 mb-3">
       <div class="card p-3 text-center">
         <h4>Occupancy Rate</h4>
-        <h2>0%</h2>
+        <h2 id="occupancy-rate">0%</h2>
       </div>
     </div>
   </div>
@@ -70,9 +70,7 @@
               data-period="yearly">Year</button>
           </div>
         </div>
-        <div style="height: 300px;">
-          <canvas id="revenueChart"></canvas>
-        </div>
+        <canvas id="revenueChart" height="300"></canvas>
       </div>
     </div>
   </div>
@@ -197,150 +195,61 @@
         <a href="{{ route('admin.rooms') }}" class="btn btn-custom">Manage Rooms</a>
     </div> --}}
 
-  <!-- Load Chart.js from CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
-
+  <!-- Modified: Added Chart.js CDN and improved chart rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      // Revenue & Occupancy Chart
-      const revenueCtx = document.getElementById('revenueChart').getContext('2d');
-      const revenueChart = new Chart(revenueCtx, {
+      // Fetch metrics and chart data on page load
+      fetch('{{ route('admin.dashboard-data') }}?period=weekly', {
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+          }
+        })
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById('check-in').textContent = data.metrics.checkIn;
+          document.getElementById('check-out').textContent = data.metrics.checkOut;
+          document.getElementById('total-in-hotel').textContent = data.metrics.totalInHotel;
+          document.getElementById('available-rooms').textContent = data.metrics.availableRooms;
+          document.getElementById('occupied-rooms').textContent = data.metrics.occupiedRooms;
+          document.getElementById('revenue-today').textContent = '₱' + data.metrics.revenueToday.toLocaleString();
+          document.getElementById('monthly-revenue').textContent = '₱' + data.metrics.monthlyRevenue
+          .toLocaleString();
+          document.getElementById('occupancy-rate').textContent = data.metrics.occupancyRate.toFixed(2) + '%';
+
+          // Update chart with initial data
+          revenueChart.data.labels = data.chartData.labels;
+          revenueChart.data.datasets[0].data = data.chartData.revenueData;
+          revenueChart.data.datasets[1].data = data.chartData.occupancyData;
+          revenueChart.update();
+        })
+        .catch(error => console.error('Error:', error));
+
+      // Initialize chart (assuming Chart.js is included)
+      const ctx = document.getElementById('revenueChart').getContext('2d');
+      const revenueChart = new Chart(ctx, {
         type: 'line',
         data: {
-          labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+          labels: [],
           datasets: [{
-              label: 'Revenue ($)',
-              data: [1200, 1900, 2100, 2500, 3200, 3800, 3100],
-              borderColor: 'rgba(75, 192, 192, 1)',
-              backgroundColor: 'rgba(75, 192, 192, 0.2)',
-              yAxisID: 'y',
-              tension: 0.4,
-              fill: true
-            },
-            {
-              label: 'Occupancy (%)',
-              data: [45, 52, 60, 65, 80, 95, 85],
-              borderColor: 'rgba(153, 102, 255, 1)',
-              backgroundColor: 'rgba(153, 102, 255, 0.2)',
-              yAxisID: 'y1',
-              tension: 0.4
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              position: 'left',
-              title: {
-                display: true,
-                text: 'Revenue ($)'
-              }
-            },
-            y1: {
-              beginAtZero: true,
-              position: 'right',
-              max: 100,
-              title: {
-                display: true,
-                text: 'Occupancy (%)'
-              },
-              grid: {
-                drawOnChartArea: false
-              }
-            }
-          }
-        }
-      });
-
-      // Room Status Chart
-      const roomStatusCtx = document.getElementById('roomStatusChart').getContext('2d');
-      const roomStatusChart = new Chart(roomStatusCtx, {
-        type: 'doughnut',
-        data: {
-          labels: ['Available', 'Occupied', 'Maintenance', 'Reserved'],
-          datasets: [{
-            data: [60, 30, 5, 5],
-            backgroundColor: [
-              'rgba(40, 167, 69, 0.8)',
-              'rgba(220, 53, 69, 0.8)',
-              'rgba(255, 193, 7, 0.8)',
-              'rgba(23, 162, 184, 0.8)'
-            ],
-            borderWidth: 1
+            label: 'Revenue',
+            data: [],
+            borderColor: '#EFBF04',
+            fill: false
+          }, {
+            label: 'Occupancy Rate',
+            data: [],
+            borderColor: '#000',
+            fill: false
           }]
         },
         options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'bottom'
-            }
-          }
-        }
-      });
-
-      // Room Type Occupancy Chart
-      const roomTypeCtx = document.getElementById('roomTypeChart').getContext('2d');
-      const roomTypeChart = new Chart(roomTypeCtx, {
-        type: 'bar',
-        data: {
-          labels: ['Standard', 'Deluxe', 'Suite', 'Executive', 'Presidential'],
-          datasets: [{
-              label: 'Total Rooms',
-              data: [20, 15, 10, 5, 2],
-              backgroundColor: 'rgba(108, 117, 125, 0.5)',
-              borderColor: 'rgba(108, 117, 125, 1)',
-              borderWidth: 1
-            },
-            {
-              label: 'Occupied',
-              data: [15, 10, 5, 2, 1],
-              backgroundColor: 'rgba(0, 123, 255, 0.5)',
-              borderColor: 'rgba(0, 123, 255, 1)',
-              borderWidth: 1
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
           scales: {
             y: {
-              beginAtZero: true,
-              title: {
-                display: true,
-                text: 'Number of Rooms'
-              }
+              beginAtZero: true
             }
-          }
-        }
-      });
-
-      // Channel Revenue Chart
-      const channelCtx = document.getElementById('channelChart').getContext('2d');
-      const channelChart = new Chart(channelCtx, {
-        type: 'pie',
-        data: {
-          labels: ['Direct Booking', 'OTA Partners', 'Travel Agents', 'Corporate', 'Other'],
-          datasets: [{
-            data: [35, 25, 20, 15, 5],
-            backgroundColor: [
-              'rgba(255, 99, 132, 0.8)',
-              'rgba(54, 162, 235, 0.8)',
-              'rgba(255, 206, 86, 0.8)',
-              'rgba(75, 192, 192, 0.8)',
-              'rgba(153, 102, 255, 0.8)'
-            ],
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
+          },
           plugins: {
             legend: {
               position: 'bottom'
@@ -363,32 +272,20 @@
           // Update chart data based on selected period
           const period = this.getAttribute('data-period');
 
-          // Sample data for different periods
-          let labels, revenueData, occupancyData;
-
-          if (period === 'weekly') {
-            labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-            revenueData = [1200, 1900, 2100, 2500, 3200, 3800, 3100];
-            occupancyData = [45, 52, 60, 65, 80, 95, 85];
-          } else if (period === 'monthly') {
-            labels = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
-            revenueData = [12000, 15000, 18000, 20000];
-            occupancyData = [55, 65, 75, 70];
-          } else if (period === 'yearly') {
-            labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
-              'Oct', 'Nov', 'Dec'
-            ];
-            revenueData = [45000, 48000, 60000, 65000, 72000, 90000, 110000, 115000,
-              95000, 75000, 68000, 80000
-            ];
-            occupancyData = [50, 55, 65, 70, 75, 85, 95, 98, 85, 70, 65, 75];
-          }
-
-          // Update chart data
-          revenueChart.data.labels = labels;
-          revenueChart.data.datasets[0].data = revenueData;
-          revenueChart.data.datasets[1].data = occupancyData;
-          revenueChart.update();
+          fetch('{{ route('admin.dashboard-data') }}?period=' + period, {
+              headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+              }
+            })
+            .then(res => res.json())
+            .then(data => {
+              revenueChart.data.labels = data.chartData.labels;
+              revenueChart.data.datasets[0].data = data.chartData.revenueData;
+              revenueChart.data.datasets[1].data = data.chartData.occupancyData;
+              revenueChart.update();
+            })
+            .catch(error => console.error('Error:', error));
         });
       });
     });

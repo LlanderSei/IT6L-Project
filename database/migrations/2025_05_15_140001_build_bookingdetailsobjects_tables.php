@@ -15,6 +15,8 @@ return new class extends Migration {
       $table->foreignId('RoomTypeID')->constrained('RoomTypes', 'ID')->onDelete('cascade')->onUpdate('cascade');
       $table->dateTime('CheckInDate');
       $table->dateTime('CheckOutDate');
+      $table->dateTime('SettledCheckIn')->nullable();
+      $table->dateTime('SettledCheckOut')->nullable();
       $table->integer('NumberOfGuests');
       $table->foreignId('RoomSizeID')->constrained('RoomSizes', 'ID')->onDelete('cascade')->onUpdate('cascade');
       $table->enum('BookingStatus', ['Pending', 'Confirmed', 'Ongoing', 'Ended', 'Cancelled'])->default('Pending');

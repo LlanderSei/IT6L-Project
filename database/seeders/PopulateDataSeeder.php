@@ -7,11 +7,13 @@ use App\Models\Room;
 use App\Models\User;
 use App\Models\RoomSize;
 use App\Models\RoomType;
+use App\Models\Service;
 use Carbon\Carbon;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use phpDocumentor\Reflection\Types\Array_;
 
 class PopulateDataSeeder extends Seeder {
   /**
@@ -30,10 +32,10 @@ class PopulateDataSeeder extends Seeder {
     // Create Admin user
     User::create([
       'id' => 1,
-      'Name' => 'Black Manager',
-      'Username' => 'Black Manager',
+      'Name' => 'Yume Admin',
+      'Username' => 'yumeadmin',
       'Role' => 'Admin',
-      'email' => 'manager@black.com',
+      'email' => 'admin@yume.com',
       'password' => Hash::make('password'),
       'created_at' => now(),
       'updated_at' => now(),
@@ -97,6 +99,7 @@ class PopulateDataSeeder extends Seeder {
           'RoomSizeID' => $roomSizeId,
           'CheckInDate' => $checkInDate,
           'CheckOutDate' => $checkOutDate,
+          'SettledCheckIn' => $checkInDate,
           'NumberOfGuests' => 1,
           'BookingStatus' => $status,
           'created_at' => now(),
@@ -174,5 +177,121 @@ class PopulateDataSeeder extends Seeder {
         $cashPaymentId++;
       }
     }
+
+    // Modified: Added ~5000 past bookings
+    $startDate = Carbon::create(2025, 1, 1);
+    $endDate = Carbon::yesterday(); // September 26, 2025
+    $maxCheckIn = $endDate->copy()->subDay(); // To allow at least 1 day stay
+
+    for ($i = 0; $i < 5000; $i++) {
+      $checkInTimestamp = rand($startDate->timestamp, $maxCheckIn->timestamp);
+      $checkInDate = Carbon::createFromTimestamp($checkInTimestamp);
+      $maxDuration = $endDate->diffInDays($checkInDate); // always >= 0
+      $duration = rand(1, max(1, $maxDuration)); // ensures at least 1
+      $checkOutDate = $checkInDate->copy()->addDays($duration);
+
+      $user = User::where('Role', 'Customer')->inRandomOrder()->first()->id;
+      $roomTypeId = RoomType::inRandomOrder()->first()->ID;
+      $roomSizeId = RoomSize::inRandomOrder()->first()->ID;
+      $numOfGuests = rand(1, RoomSize::find($roomSizeId)->RoomCapacity);
+
+      // Create booking
+      DB::table('bookingdetails')->insert([
+        'ID' => $bookingId,
+        'UserID' => $user,
+        'RoomTypeID' => $roomTypeId,
+        'RoomSizeID' => $roomSizeId,
+        'CheckInDate' => $checkInDate,
+        'CheckOutDate' => $checkOutDate,
+        'SettledCheckIn' => $checkInDate,
+        'SettledCheckOut' => $checkOutDate,
+        'NumberOfGuests' => $numOfGuests,
+        'BookingStatus' => 'Ended',
+        'created_at' => $checkInDate,
+        'updated_at' => $checkOutDate,
+      ]);
+
+      // Services
+      $numOfService = rand(0, 4);
+      $allAvailableServices = range(1, 4);
+      $chosenServicesId = ($numOfService >= 1) ? (array) array_rand(array_flip($allAvailableServices), $numOfService) : [];
+      if (!empty($chosenServicesId)) {
+        foreach ($chosenServicesId as $serviceId) {
+          DB::table('servicesadded')->insert([
+            'BookingDetailID' => $bookingId,
+            'ServiceID' => $serviceId,
+            'created_at' => $checkInDate,
+            'updated_at' => $checkInDate,
+          ]);
+        }
+      }
+
+      // Cost
+      $roomBasePrice = RoomType::find($roomTypeId)->RoomPrice;
+      $roomSucceedingNightsPrice = ($duration >= 2) ? RoomType::find($roomTypeId)->SucceedingNights * ($duration - 1) : 0;
+      $guestFee = RoomSize::find($roomSizeId)->PricePerPerson * $numOfGuests;
+      $serviceFeeTotal = 0;
+      if (!empty($chosenServicesId)) {
+        foreach ($chosenServicesId as $serviceId) {
+          $service = DB::table('services')->where('ID', $serviceId)->first();
+          $serviceFeeTotal += $service->ServicePrice * ($duration - 1);
+        }
+      }
+      $subtotal = $roomBasePrice + $roomSucceedingNightsPrice + $guestFee + $serviceFeeTotal;
+      $totalAmount = $subtotal; // No discounts
+
+      // Booking Cost Details
+      DB::table('bookingcostdetails')->insert([
+        'ID' => $bookingId,
+        'BookingDetailID' => $bookingId,
+        'RoomBasePrice' => $roomBasePrice,
+        'RoomSucceedingNightsPrice' => $roomSucceedingNightsPrice,
+        'Nights' => $duration,
+        'GuestFee' => $guestFee,
+        'ServiceBasePrice' => Service::whereIn('ID', $chosenServicesId)->sum('ServicePrice') ?? 0.00,
+        'ServiceSucceedingNightsPrice' => $serviceFeeTotal - Service::whereIn('ID', $chosenServicesId)->sum('ServicePrice') ?? 0.00,
+        'Subtotal' => $subtotal,
+        'Discount' => 0.00,
+        'TotalAmount' => $totalAmount,
+        'created_at' => $checkInDate,
+        'updated_at' => $checkOutDate,
+      ]);
+
+      // Payment (cash, Completed)
+      DB::table('paymentinfos')->insert([
+        'ID' => $bookingId,
+        'BookingDetailID' => $bookingId,
+        'TotalAmount' => $totalAmount,
+        'PaymentStatus' => 'Verified',
+        'PaymentMethod' => 'Cash',
+        'created_at' => $checkInDate,
+        'updated_at' => $checkInDate,
+      ]);
+
+      // Cash Payment
+      DB::table('paymenttype_cash')->insert([
+        'ID' => $bookingId,
+        'PaymentInfoID' => $bookingId,
+        'CashAmount' => $totalAmount,
+        'created_at' => $checkInDate,
+        'updated_at' => $checkInDate,
+      ]);
+
+      // Assigned Room (random matching type and size)
+
+      AssignedRoom::create([
+        'ID' => $bookingId,
+        'BookingDetailID' => $bookingId,
+        'RoomID' => Room::where('RoomTypeID', $roomTypeId)->where('RoomSizeID', $roomSizeId)->inRandomOrder()->first()->ID,
+        'Status' => 'Ended',
+        'created_at' => $checkInDate,
+        'updated_at' => $checkOutDate,
+      ]);
+
+      $bookingId++;
+      $paymentId++;
+      $cashPaymentId++;
+    }
+    // End Modified
   }
 }

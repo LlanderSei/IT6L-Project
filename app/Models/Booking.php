@@ -11,11 +11,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class Booking extends Model {
   protected $table = 'BookingDetails';
   protected $primaryKey = 'ID';
-  protected $fillable = ['UserID', 'RoomTypeID', 'CheckInDate', 'CheckOutDate', 'NumberOfGuests', 'RoomSizeID', 'BookingStatus'];
+  protected $fillable = ['UserID', 'RoomTypeID', 'CheckInDate', 'CheckOutDate', 'SettledCheckIn', 'SettledCheckOut', 'NumberOfGuests', 'RoomSizeID', 'BookingStatus'];
 
   protected $casts = [
-    'CheckInDate' => 'date',
-    'CheckOutDate' => 'date',
+    'CheckInDate' => 'datetime',
+    'CheckOutDate' => 'datetime',
   ];
 
   public function user() {

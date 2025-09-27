@@ -177,7 +177,8 @@
         if (link && (link.closest('.pagination') || link.closest('thead'))) {
           e.preventDefault();
           const url = new URL(link.href);
-          url.searchParams.set('tab', document.querySelector('.nav-link.active').dataset.tab);
+          const activeTab = document.querySelector('.nav-link.active')?.dataset.tab || 'staff';
+          url.searchParams.set('tab', activeTab);
           loadTabContent(null, url.toString());
         }
       });
@@ -188,7 +189,8 @@
           const formData = new FormData(this);
           const url = new URL(this.action);
           formData.forEach((value, key) => url.searchParams.set(key, value));
-          url.searchParams.set('tab', document.querySelector('.nav-link.active').dataset.tab);
+          const activeTab = document.querySelector('.nav-link.active')?.dataset.tab || 'staff';
+          url.searchParams.set('tab', activeTab);
           loadTabContent(null, url.toString());
         });
       }
@@ -326,10 +328,7 @@
           // Debug: Log JSON payload
           console.log('JSON Payload:', jsonData);
 
-          let currentTab = document.querySelector('.nav-link.active')?.dataset.tab;
-          if (currentTab === 'undefined' || !currentTab) {
-            currentTab = 'staff';
-          }
+          const currentTab = document.querySelector('.nav-link.active')?.dataset.tab || 'staff';
 
           try {
             const response = await fetch(this.action, {
@@ -395,10 +394,7 @@
       const confirmDelete = document.getElementById('confirmDelete');
       if (confirmDelete) {
         confirmDelete.addEventListener('click', async function() {
-          let currentTab = document.querySelector('.nav-link.active')?.dataset.tab;
-          if (currentTab === 'undefined' || !currentTab) {
-            currentTab = 'staff';
-          }
+          const currentTab = document.querySelector('.nav-link.active')?.dataset.tab || 'staff';
 
           try {
             const response = await fetch(`/admin/users/${deleteId}`, {
@@ -426,18 +422,26 @@
 
       function loadTabContent(tab, url = null) {
         if (!url) {
-          url = "{{ route('admin.usermanagement') }}?tab=" + tab;
+          url = "{{ route('admin.usermanagement') }}?tab=" + (tab || 'staff');
           const search = searchForm.querySelector('input[name="search"]').value;
           if (search) url += "&search=" + encodeURIComponent(search);
         }
+        console.log('Loading tab content for URL:', url); // Debug: Log URL
         fetch(url, {
             headers: {
               'X-Requested-With': 'XMLHttpRequest',
               'Accept': 'application/json',
             }
           })
-          .then(res => res.json())
+          .then(res => {
+            console.log('Response Status:', res.status); // Debug: Log status
+            if (!res.ok) {
+              throw new Error(`HTTP error! Status: ${res.status}`);
+            }
+            return res.json();
+          })
           .then(data => {
+            console.log('Response Data:', data); // Debug: Log response data
             if (data.html) {
               tabContent.innerHTML = data.html;
             } else {
@@ -452,5 +456,4 @@
       }
     });
   </script>
-  <!-- End Modified -->
 @endsection
