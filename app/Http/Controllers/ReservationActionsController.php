@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Models\AssignedRoom;
 use App\Models\Booking;
 use App\Models\Room;
@@ -19,6 +20,7 @@ class ReservationActionsController extends Controller {
   }
 
   public function reviewBooking($id) {
+    Log::debug(url()->previous());
     $booking = Booking::with([
       'user',
       'roomType',
@@ -36,6 +38,7 @@ class ReservationActionsController extends Controller {
 
     return view('admin.reviewbooking', [
       'booking' => $booking,
+      'prevRoute' => url()->previous(),
     ]);
   }
 

@@ -69,14 +69,26 @@
             <div class="d-flex gap-3 align-items-center" id="authSection">
               <a href="{{ route('booking') }}" class="btn btn-primary">Book now</a>
               @if (Auth::check())
-                <form action="{{ route('logout') }}" method="POST" id="logoutForm">
-                  @csrf
-                  <button type="submit" class="btn btn-outline" id="AuthBtn" data-form="login"><i
-                      class="bi bi-person-circle"></i>
-                    {{ Auth::user()->Role === 'Admin' ? '[ADMIN]' : '' }}
-                    {{ Auth::user()->Name ? '(' . Auth::user()->Name . ')' : '' }}
-                    {{ Auth::user()->email }}</button>
-                </form>
+                <div class="dropdown">
+                  <button class="btn btn-outline dropdown-toggle" type="button" id="userDropdown"
+                    data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-person-circle"></i>
+                    {{ Auth::user()->Role === 'Admin' ? Auth::user()->Role . ' | ' : '' }}
+                    {{ Auth::user()->Name ? Auth::user()->Name . ' |' : '' }}
+                    {{ Auth::user()->email }}
+                  </button>
+                  <ul class="dropdown-menu" aria-labelledby="userDropdown">
+                    @if (Auth::user()->Role === 'Admin')
+                      <li><a class="dropdown-item" href="{{ route('admin.dashboard') }}">Admin Dashboard</a></li>
+                    @endif
+                    <li>
+                      <form action="{{ route('logout') }}" method="POST" id="logoutForm">
+                        @csrf
+                        <button type="submit" class="dropdown-item">Logout</button>
+                      </form>
+                    </li>
+                  </ul>
+                </div>
               @else
                 <button class="btn btn-outline-secondary" id="AuthBtn" data-bs-toggle="modal"
                   data-bs-target="#authModal" data-form="login">Sign Up / Login</button>
@@ -113,31 +125,25 @@
                   @csrf
                   <input type="email" class="modal-input" placeholder="Email" name="email"
                     value="{{ old('email') }}" required>
-                  <div class="invalid-feedback" id="login-email-error"></div>
                   <input type="password" class="modal-input" placeholder="Password" name="password" required>
-                  <div class="invalid-feedback" id="login-password-error"></div>
-                  <button type="submit" class="modal-btn">LOGIN</button>
+                  <button type="submit" class="modal-btn">Log in</button>
                 </form>
+                <div class="text-center mt-3">
+                  <a href="#">Forgot password?</a>
+                </div>
               </div>
               <div class="tab-pane fade" id="signupForm">
-                <h3 class="text-center mb-4">Sign Up</h3>
+                <h3 class="text-center mb-4">Sign up</h3>
                 <form id="signupFormSubmit" action="{{ route('register') }}" method="POST">
                   @csrf
                   <input type="text" class="modal-input" placeholder="Name" name="Name"
                     value="{{ old('Name') }}" required>
-                  <div class="invalid-feedback" id="signup-Name-error"></div>
-                  <input type="text" class="modal-input" placeholder="Username" name="Username"
-                    value="{{ old('Username') }}" required>
-                  <div class="invalid-feedback" id="signup-Username-error"></div>
                   <input type="email" class="modal-input" placeholder="Email" name="email"
                     value="{{ old('email') }}" required>
-                  <div class="invalid-feedback" id="signup-email-error"></div>
                   <input type="password" class="modal-input" placeholder="Password" name="password" required>
-                  <div class="invalid-feedback" id="signup-password-error"></div>
-                  <input type="password" class="modal-input" placeholder="Confirm password"
+                  <input type="password" class="modal-input" placeholder="Confirm Password"
                     name="password_confirmation" required>
-                  <div class="invalid-feedback" id="signup-password_confirmation-error"></div>
-                  <button type="submit" class="modal-btn">SIGN UP</button>
+                  <button type="submit" class="modal-btn">Sign up</button>
                 </form>
               </div>
             </div>
@@ -146,240 +152,239 @@
       </div>
     </div>
 
-    <!-- Main Content -->
-    @yield('content')
-
     <!-- Toast Container -->
-    <div class="position-fixed bottom-0 start-50 translate-middle-x p-3" style="z-index: 9999;" id="toastContainer">
-      @if (session('toast_success'))
-        <div class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive"
-          aria-atomic="true" data-bs-autohide="true" data-bs-delay="3000">
-          <div class="d-flex">
-            <div class="toast-body text-center">
-              {{ session('toast_success') }}
-            </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
-              aria-label="Close"></button>
-          </div>
-        </div>
-      @elseif (session('toast_error'))
-        <div class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive"
-          aria-atomic="true" data-bs-autohide="true" data-bs-delay="3000">
-          <div class="d-flex">
-            <div class="toast-body text-center">
-              {{ session('toast_error') }}
-            </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
-              aria-label="Close"></button>
-          </div>
-        </div>
-      @elseif(session('toast_info'))
-        <div class="toast align-items-center text-bg-warning border-0" role="alert" aria-live="assertive"
-          aria-atomic="true" data-bs-autohide="true" data-bs-delay="3000">
-          <div class="d-flex">
-            <div class="toast-body text-center">
-              {{ session('toast_info') }}
-            </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
-              aria-label="Close"></button>
-          </div>
-        </div>
-      @endif
+    <div aria-live="polite" aria-atomic="true" class="position-relative">
+      <div class="toast-container position-fixed bottom-0 start-50 translate-middle-x p-3" id="toastContainer"></div>
     </div>
 
+    <!-- Main Content -->
+    <main>
+      @yield('content')
+    </main>
+
     <!-- Footer -->
-    <footer class="bg-dark text-white py-5 mt-5 EN">
+    <footer class="bg-dark text-light py-4">
       <div class="container">
         <div class="row">
           <div class="col-md-4">
-            <h3 class="fs-5 mb-3">Contact</h3>
+            <h5>KagayakuKin Yume Hotel</h5>
+            <p>Experience luxury and comfort in the heart of the city.</p>
+          </div>
+          <div class="col-md-4">
+            <h5>Quick Links</h5>
             <ul class="list-unstyled">
-              <li><i class="bi bi-geo-alt me-2"></i> 123 Luxury Avenue, Cityscape, Country</li>
-              <li><i class="bi bi-telephone me-2"></i> +1 (555) 123-4567</li>
-              <li><i class="bi bi-envelope me-2"></i> info@luxuryhotel.com</li>
+              <li><a href="{{ route('home') }}" class="text-light">Home</a></li>
+              <li><a href="{{ route('rooms') }}" class="text-light">Rooms</a></li>
+              <li><a href="{{ route('about') }}" class="text-light">About</a></li>
+              <li><a href="{{ route('contact') }}" class="text-light">Contact</a></li>
             </ul>
           </div>
           <div class="col-md-4">
-            <h3 class="fs-5 mb-3">Follow Us</h3>
-            <div class="d-flex gap-3">
-              <a href="#" class="text-white"><i class="bi bi-facebook"></i></a>
-              <a href="#" class="text-white"><i class="bi bi-instagram"></i></a>
-              <a href="#" class="text-white"><i class="bi bi-twitter"></i></a>
-              <a href="#" class="text-white"><i class="bi bi-linkedin"></i></a>
-            </div>
+            <h5>Contact Us</h5>
+            <p>Email: info@kagayakukin.com<br>Phone: +1 234 567 890</p>
           </div>
         </div>
-        <hr class="border-gray-600 mt-4">
-        <p class="text-center text-gray-400">© 2025 Luxury Hotel. All rights reserved.</p>
+        <hr class="bg-light">
+        <p class="text-center mb-0">&copy; 2025 KagayakuKin Yume Hotel. All rights reserved.</p>
       </div>
     </footer>
 
     <!-- Bootstrap JS CDN -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{{ asset('js/app.layout.js') }}" defer></script>
+    <script src="{{ asset('js/app.layout.js') }}"></script>
     <script>
-      // Initialize toasts on page load
-      window.addEventListener("load", () => {
-        const toastContainer = document.getElementById('toastContainer');
-        const toasts = toastContainer.querySelectorAll('.toast');
-        toasts.forEach(toast => {
-          new bootstrap.Toast(toast).show();
-        });
-
-        @if ($errors->register->any())
-          document.getElementById('signup-tab').click();
-          new bootstrap.Modal(document.getElementById('authModal')).show();
-        @elseif (session('LoginError'))
-          new bootstrap.Modal(document.getElementById('authModal')).show();
-        @endif
-      });
-
-      // Handle form submissions with AJAX
       document.addEventListener('DOMContentLoaded', () => {
+        const authModal = document.getElementById('authModal');
+        const authBtn = document.getElementById('AuthBtn');
+        const authSection = document.getElementById('authSection');
         const loginForm = document.getElementById('loginFormSubmit');
         const signupForm = document.getElementById('signupFormSubmit');
-        const logoutForm = document.getElementById('logoutForm');
-        const authSection = document.getElementById('authSection');
-        const authModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('authModal'));
+        const initialLogoutForm = document.getElementById('logoutForm');
 
-        // Handle Login Form Submission
-        if (loginForm) {
-          loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(loginForm);
-            try {
-              const response = await fetch(loginForm.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                  'X-Requested-With': 'XMLHttpRequest',
-                  'Accept': 'application/json',
-                  'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
-                },
-              });
-              const data = await response.json();
-
-              // Clear previous errors
-              document.querySelectorAll('#loginForm .invalid-feedback').forEach(el => el.textContent = '');
-              document.querySelectorAll('#loginForm .modal-input').forEach(el => el.classList.remove('is-invalid'));
-
-              if (data.status === 'success') {
-                // Show success toast
-                showToast('success', data.message);
-                // Update auth section
-                updateAuthSection(data.user);
-                // Close modal
-                authModal.hide();
-                // Redirect admin users
-                if (data.redirect) {
-                  window.location.href = data.redirect;
-                }
-              } else {
-                // Show error toast and display validation errors
-                showToast('error', data.message || 'Login failed. Check your credentials.');
-                if (data.errors) {
-                  Object.keys(data.errors).forEach(key => {
-                    const errorElement = document.getElementById(`login-${key}-error`);
-                    const inputElement = loginForm.querySelector(`[name="${key}"]`);
-                    if (errorElement && inputElement) {
-                      errorElement.textContent = data.errors[key][0];
-                      inputElement.classList.add('is-invalid');
-                    }
-                  });
-                }
-              }
-            } catch (error) {
-              showToast('error', 'An error occurred. Please try again.');
+        if (authModal && authBtn) {
+          authBtn.addEventListener('click', () => {
+            const form = authBtn.dataset.form;
+            if (form === 'login') {
+              document.getElementById('login-tab').click();
+            } else if (form === 'signup') {
+              document.getElementById('signup-tab').click();
             }
           });
         }
 
-        // Handle Signup Form Submission
-        if (signupForm) {
-          signupForm.addEventListener('submit', async (e) => {
+        function attachLogoutListener(form) {
+          form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const formData = new FormData(signupForm);
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
             try {
-              const response = await fetch(signupForm.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                  'X-Requested-With': 'XMLHttpRequest',
-                  'Accept': 'application/json',
-                  'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
-                },
-              });
-              const data = await response.json();
-
-              // Clear previous errors
-              document.querySelectorAll('#signupForm .invalid-feedback').forEach(el => el.textContent = '');
-              document.querySelectorAll('#signupForm .modal-input').forEach(el => el.classList.remove('is-invalid'));
-
-              if (data.status === 'success') {
-                // Show success toast
-                showToast('success', data.message);
-                // Update auth section
-                updateAuthSection(data.user);
-                // Close modal
-                authModal.hide();
-              } else {
-                // Show error toast and display validation errors
-                showToast('error', data.message || 'Registration failed. Please check your inputs.');
-                if (data.errors) {
-                  Object.keys(data.errors).forEach(key => {
-                    const errorElement = document.getElementById(`signup-${key}-error`);
-                    const inputElement = signupForm.querySelector(`[name="${key}"]`);
-                    if (errorElement && inputElement) {
-                      errorElement.textContent = data.errors[key][0];
-                      inputElement.classList.add('is-invalid');
-                    }
-                  });
-                }
-              }
-            } catch (error) {
-              showToast('error', 'An error occurred. Please try again.');
-            }
-          });
-        }
-
-        // Handle Logout Form Submission
-        if (logoutForm) {
-          logoutForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-              const response = await fetch(logoutForm.action, {
+              const response = await fetch(form.action, {
                 method: 'POST',
                 headers: {
                   'X-Requested-With': 'XMLHttpRequest',
                   'Accept': 'application/json',
-                  'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                  'X-CSRF-TOKEN': csrfToken,
                 },
+                body: new FormData(form),
               });
               const data = await response.json();
 
               if (data.status === 'success') {
-                // Show success toast
                 showToast('success', data.message);
-                // Update auth section to show login button
                 authSection.innerHTML = `
                   <a href="{{ route('booking') }}" class="btn btn-primary">Book now</a>
                   <button class="btn btn-outline-secondary" id="AuthBtn" data-bs-toggle="modal"
                     data-bs-target="#authModal" data-form="login">Sign Up / Login</button>
                 `;
-                // Update CSRF token
-                document.querySelector('meta[name="csrf-token"]').setAttribute('content', data.csrf_token);
-                document.querySelector('#loginFormSubmit input[name="_token"]').value = data.csrf_token;
-                document.querySelector('#signupFormSubmit input[name="_token"]').value = data.csrf_token;
+                // Update CSRF token in meta tag and forms
+                if (data.csrf_token) {
+                  document.querySelector('meta[name="csrf-token"]').setAttribute('content', data.csrf_token);
+                  document.querySelector('#loginFormSubmit input[name="_token"]').value = data.csrf_token;
+                  document.querySelector('#signupFormSubmit input[name="_token"]').value = data.csrf_token;
+                }
+                // Reattach auth button listener
+                const newAuthBtn = document.getElementById('AuthBtn');
+                if (newAuthBtn) {
+                  newAuthBtn.addEventListener('click', () => {
+                    const form = newAuthBtn.dataset.form;
+                    if (form === 'login') {
+                      document.getElementById('login-tab').click();
+                    } else if (form === 'signup') {
+                      document.getElementById('signup-tab').click();
+                    }
+                  });
+                }
               } else {
                 showToast('error', data.message || 'Logout failed. Please try again.');
               }
             } catch (error) {
-              showToast('error', 'An error occurred. Please try again.');
+              showToast('error', 'An error occurred during logout. Please try again.');
+              console.error('Logout Error:', error);
             }
           });
         }
 
-        // Function to show toast messages
+        if (initialLogoutForm) {
+          attachLogoutListener(initialLogoutForm);
+        }
+
+        if (loginForm) {
+          loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            clearValidationErrors(loginForm);
+            try {
+              const response = await fetch(loginForm.action, {
+                method: 'POST',
+                headers: {
+                  'X-Requested-With': 'XMLHttpRequest',
+                  'Accept': 'application/json',
+                },
+                body: new FormData(loginForm),
+              });
+              const data = await response.json();
+
+              if (data.status === 'success') {
+                showToast('success', data.message);
+                const authModalInstance = bootstrap.Modal.getInstance(authModal);
+                authModalInstance.hide();
+                updateAuthSection(data.user);
+                if (data.csrf_token) {
+                  document.querySelector('meta[name="csrf-token"]').setAttribute('content', data.csrf_token);
+                  document.querySelector('#loginFormSubmit input[name="_token"]').value = data.csrf_token;
+                  document.querySelector('#signupFormSubmit input[name="_token"]').value = data.csrf_token;
+                }
+              } else {
+                showToast('error', data.message || 'Login failed. Please try again.');
+                if (data.errors) {
+                  displayValidationErrors(loginForm, data.errors);
+                }
+              }
+            } catch (error) {
+              showToast('error', 'An error occurred during login. Please try again.');
+              console.error('Login Error:', error);
+            }
+          });
+        }
+
+        if (signupForm) {
+          signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            clearValidationErrors(signupForm);
+            try {
+              const response = await fetch(signupForm.action, {
+                method: 'POST',
+                headers: {
+                  'X-Requested-With': 'XMLHttpRequest',
+                  'Accept': 'application/json',
+                },
+                body: new FormData(signupForm),
+              });
+              const data = await response.json();
+
+              if (data.status === 'success') {
+                showToast('success', data.message);
+                const authModalInstance = bootstrap.Modal.getInstance(authModal);
+                authModalInstance.hide();
+                updateAuthSection(data.user);
+                if (data.csrf_token) {
+                  document.querySelector('meta[name="csrf-token"]').setAttribute('content', data.csrf_token);
+                  document.querySelector('#loginFormSubmit input[name="_token"]').value = data.csrf_token;
+                  document.querySelector('#signupFormSubmit input[name="_token"]').value = data.csrf_token;
+                }
+              } else {
+                showToast('error', data.message || 'Signup failed. Please try again.');
+                if (data.errors) {
+                  displayValidationErrors(signupForm, data.errors);
+                }
+              }
+            } catch (error) {
+              showToast('error', 'An error occurred during signup. Please try again.');
+              console.error('Signup Error:', error);
+            }
+          });
+        }
+
+        function clearValidationErrors(form) {
+          form.querySelectorAll('input').forEach(input => {
+            input.classList.remove('is-invalid');
+          });
+        }
+
+        function displayValidationErrors(form, errors) {
+          Object.keys(errors).forEach(field => {
+            const inputElement = form.querySelector(`[name="${field}"]`);
+            if (inputElement) {
+              inputElement.classList.add('is-invalid');
+            }
+          });
+        }
+
+        function updateAuthSection(user) {
+          authSection.innerHTML = `
+            <a href="{{ route('booking') }}" class="btn btn-primary">Book now</a>
+            <div class="dropdown">
+              <button class="btn btn-outline dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-person-circle"></i>
+                ${user.Role === 'Admin' ? '[ADMIN]' : ''}
+                ${user.Name ? user.Name + ' |' : ''}
+                ${user.email}
+              </button>
+              <ul class="dropdown-menu" aria-labelledby="userDropdown">
+                ${user.Role === 'Admin' ? '<li><a class="dropdown-item" href="{{ route('admin.dashboard') }}">Admin Dashboard</a></li>' : ''}
+                <li>
+                  <form action="{{ route('logout') }}" method="POST" id="logoutForm">
+                    <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]').content}">
+                    <button type="submit" class="dropdown-item">Logout</button>
+                  </form>
+                </li>
+              </ul>
+            </div>
+          `;
+          const newLogoutForm = document.getElementById('logoutForm');
+          if (newLogoutForm) {
+            attachLogoutListener(newLogoutForm);
+          }
+        }
+
         function showToast(type, message) {
           const toastContainer = document.getElementById('toastContainer');
           const bgClass = type === 'success' ? 'text-bg-success' : type === 'error' ? 'text-bg-danger' :
@@ -399,56 +404,6 @@
           toastContainer.innerHTML = toastHTML;
           const toast = toastContainer.querySelector('.toast');
           new bootstrap.Toast(toast).show();
-        }
-
-        // Function to update auth section after login/signup
-        function updateAuthSection(user) {
-          authSection.innerHTML = `
-            <a href="{{ route('booking') }}" class="btn btn-primary">Book now</a>
-            <form action="{{ route('logout') }}" method="POST" id="logoutForm">
-              <button type="submit" class="btn btn-outline" id="AuthBtn" data-form="login"><i
-                  class="bi bi-person-circle"></i>
-                ${user.Role === 'Admin' ? '[ADMIN]' : ''}
-                ${user.Name ? '(' + user.Name + ')' : ''}
-                ${user.email}
-              </button>
-            </form>
-          `;
-          // Reattach logout event listener
-          const newLogoutForm = document.getElementById('logoutForm');
-          if (newLogoutForm) {
-            newLogoutForm.addEventListener('submit', async (e) => {
-              e.preventDefault();
-              try {
-                const response = await fetch(newLogoutForm.action, {
-                  method: 'POST',
-                  headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
-                  },
-                });
-                const data = await response.json();
-
-                if (data.status === 'success') {
-                  showToast('success', data.message);
-                  authSection.innerHTML = `
-                    <a href="{{ route('booking') }}" class="btn btn-primary">Book now</a>
-                    <button class="btn btn-outline-secondary" id="AuthBtn" data-bs-toggle="modal"
-                      data-bs-target="#authModal" data-form="login">Sign Up / Login</button>
-                  `;
-                  // Update CSRF token
-                  document.querySelector('meta[name="csrf-token"]').setAttribute('content', data.csrf_token);
-                  document.querySelector('#loginFormSubmit input[name="_token"]').value = data.csrf_token;
-                  document.querySelector('#signupFormSubmit input[name="_token"]').value = data.csrf_token;
-                } else {
-                  showToast('error', data.message || 'Logout failed. Please try again.');
-                }
-              } catch (error) {
-                showToast('error', 'An error occurred. Please try again.');
-              }
-            });
-          }
         }
       });
     </script>

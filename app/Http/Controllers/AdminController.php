@@ -68,7 +68,7 @@ class AdminController extends Controller {
       $end = $today->copy()->endOfWeek();
       for ($date = $start; $date <= $end; $date = $date->addDay()) {
         $labels[] = $date->format('D');
-        $revenueData[] = (float) PaymentInfos::whereDate('updated_at', $date)->where('PaymentStatus', 'Verified')->sum('TotalAmount');
+        $revenueData[] = (float) PaymentInfos::whereDate('updated_at', $date)->where('PaymentStatus', 'Verified')->avg('TotalAmount');
         $occupancyData[] = (Room::count() > 0) ? (AssignedRoom::whereDate('created_at', $date)
           ->whereHas('booking', function ($query) use ($date) {
             $query->where('SettledCheckIn', '<=', $date)->orWhere('SettledCheckOut', '>=', $date);
@@ -84,7 +84,7 @@ class AdminController extends Controller {
       $weekCount = 1;
       for ($date = $start; $date <= $end; $date = $date->addWeek()) {
         $labels[] = 'Week ' . $weekCount++;
-        $revenueData[] = (float) PaymentInfos::whereBetween('updated_At', [$date, $date->copy()->addWeek()])->where('PaymentStatus', 'Verified')->sum('TotalAmount');
+        $revenueData[] = (float) PaymentInfos::whereBetween('updated_At', [$date, $date->copy()->addWeek()])->where('PaymentStatus', 'Verified')->avg('TotalAmount');
         $occupancyData[] = (Room::count() > 0) ? (AssignedRoom::whereHas('booking', function ($query) use ($date) {
           $query->where('SettledCheckIn', '<=', $date->copy()->addWeek())->orWhere('SettledCheckOut', '>=', $date);
         })->count() / Room::count() * 100) : 0;
@@ -97,7 +97,7 @@ class AdminController extends Controller {
         $revenueData[] = (float) PaymentInfos::whereMonth('updated_at', $month)
           ->whereYear('created_at', $today->year)
           ->where('PaymentStatus', 'Verified')
-          ->sum('TotalAmount');
+          ->avg('TotalAmount');
         $occupancyData[] = (Room::count() > 0) ? (AssignedRoom::whereHas('booking', function ($query) use ($today, $month) {
           $query->whereMonth('CheckInDate', $month)->whereYear('SettledCheckIn', $today->year);
         })->count() / Room::count() * 100) : 0;
@@ -249,49 +249,50 @@ class AdminController extends Controller {
   }
 
   public function viewRooms(Request $request) {
-    Log::debug('viewRooms Request:', ['query' => $request->query()]); // Debug: Log request parameters
     $search = $request->input('search');
     $sort = $request->input('sort', 'RoomName');
     $direction = $request->input('direction', 'asc');
     $perPage = 30;
     $tab = $request->input('tab', 'occupied');
 
-    $validSortColumns = ['RoomName', 'status', 'RoomTypeName', 'RoomSizeName', 'Floor', 'Occupant'];
+    $validSortColumns = ['RoomName', 'RoomTypeName', 'RoomSizeName', 'Floor', 'status', 'Occupant'];
     if (!in_array($sort, $validSortColumns)) {
       $sort = 'RoomName';
     }
 
-    $baseQuery = Room::with(['roomType', 'roomSize'])
-      ->leftJoin('RoomTypes', 'Rooms.RoomTypeID', '=', 'RoomTypes.ID')
-      ->leftJoin('RoomSizes', 'Rooms.RoomSizeID', '=', 'RoomSizes.ID')
-      ->leftJoin('AssignedRooms', 'Rooms.ID', '=', 'AssignedRooms.RoomID')
+    $baseQuery = DB::table('Rooms')
+      ->leftJoin('AssignedRooms', function ($join) {
+        $join->on('Rooms.ID', '=', 'AssignedRooms.RoomID')
+          ->where('AssignedRooms.Status', '=', 'Ongoing');
+      })
       ->leftJoin('BookingDetails', 'AssignedRooms.BookingDetailID', '=', 'BookingDetails.ID')
-      ->leftJoin('users', 'BookingDetails.UserID', '=', 'users.id')
+      ->leftJoin('Users', 'BookingDetails.UserID', '=', 'Users.id')
+      ->join('RoomTypes', 'Rooms.RoomTypeID', '=', 'RoomTypes.ID')
+      ->join('RoomSizes', 'Rooms.RoomSizeID', '=', 'RoomSizes.ID')
       ->select(
         'Rooms.ID',
         'Rooms.RoomName',
+        'RoomTypes.RoomTypeName',
+        'RoomSizes.RoomSizeName',
         'Rooms.Floor',
-        'RoomTypes.RoomTypeName as RoomTypeName', // Modified: Use lowercase 'name'
-        'RoomSizes.RoomSizeName as RoomSizeName', // Modified: Use lowercase 'name'
-        'AssignedRooms.Status as status',
-        'users.Name as Occupant'
+        DB::raw("CASE WHEN AssignedRooms.ID IS NOT NULL THEN 'Occupied' ELSE 'Available' END as status"),
+        DB::raw("COALESCE(Users.Name, 'None') as Occupant")
       );
 
     if ($search) {
       $baseQuery->where(function ($query) use ($search) {
         $query->where('Rooms.RoomName', 'like', "%$search%")
-          ->orWhere('RoomTypes.name', 'like', "%$search%")
-          ->orWhere('RoomSizes.name', 'like', "%$search%")
+          ->orWhere('RoomTypes.RoomTypeName', 'like', "%$search%")
+          ->orWhere('RoomSizes.RoomSizeName', 'like', "%$search%")
           ->orWhere('Rooms.Floor', 'like', "%$search%")
           ->orWhere('users.Name', 'like', "%$search%");
       });
     }
 
     if ($tab === 'occupied') {
-      $baseQuery->whereNotNull('BookingDetails.ID')
-        ->where('AssignedRooms.Status', 'Ongoing');
+      $baseQuery->whereNotNull('AssignedRooms.ID');
     } elseif ($tab === 'available') {
-      $baseQuery->whereNull('BookingDetails.ID');
+      $baseQuery->whereNull('AssignedRooms.ID');
     }
 
     try {

@@ -187,31 +187,11 @@
 
       <h3>Actions</h3>
       <div class="d-flex flex-wrap gap-2">
-        @if (
-            $booking->BookingStatus === 'Pending' &&
-                $booking->paymentInfo &&
-                $booking->paymentInfo->PaymentStatus === 'Submitted')
-          <form action="{{ route('admin.booking.accept', $booking->ID) }}" method="POST">
-            @csrf
-            @method('PATCH')
-            <button type="submit" class="btn btn-success">Accept Payment</button>
-          </form>
-          <form action="{{ route('admin.booking.reject', $booking->ID) }}" method="POST">
-            @csrf
-            @method('PATCH')
-            <button type="submit" class="btn btn-danger">Reject Payment</button>
-          </form>
-        @endif
         @if ($booking->BookingStatus === 'Confirmed')
           <form action="{{ route('admin.booking.checkin', $booking->ID) }}" method="POST">
             @csrf
             @method('PATCH')
             <button type="submit" class="btn btn-primary">Check-In</button>
-          </form>
-          <form action="{{ route('admin.booking.cancel', $booking->ID) }}" method="POST">
-            @csrf
-            @method('PATCH')
-            <button type="submit" class="btn btn-danger">Cancel Booking</button>
           </form>
         @endif
         @if ($booking->BookingStatus === 'Ongoing')
@@ -220,18 +200,38 @@
             @method('PATCH')
             <button type="submit" class="btn btn-primary">Check-Out</button>
           </form>
-          <form action="{{ route('admin.booking.cancel', $booking->ID) }}" method="POST">
-            @csrf
-            @method('PATCH')
-            <button type="submit" class="btn btn-danger">Cancel Booking</button>
-          </form>
         @endif
+        <button type="button" class="btn btn-danger" data-bs-toggle="modal"
+          data-bs-target="#cancelModal{{ $booking->ID }}">Cancel Booking</button>
+        <!-- Cancel Confirmation Modal -->
+        <div class="modal fade" id="cancelModal{{ $booking->ID }}" tabindex="-1"
+          aria-labelledby="cancelModalLabel{{ $booking->ID }}" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="cancelModalLabel{{ $booking->ID }}">Confirm Cancellation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                Are you sure you want to cancel reservation ID {{ $booking->ID }} for {{ $booking->user->Name }}?
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <form action="{{ route('admin.booking.cancel', $booking->ID) }}" method="POST">
+                  @csrf
+                  @method('DELETE')
+                  <button type="submit" class="btn btn-danger">Confirm Cancel</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
         @if (in_array($booking->BookingStatus, ['Ended', 'Cancelled']))
           <p>No actions available.</p>
         @endif
       </div>
 
-      <a href="{{ route('admin.guest') }}" class="btn btn-secondary mt-3">Back to Guest List</a>
+      <a href="{{ $prevRoute ?? route('admin.guest') }}" class="btn btn-secondary mt-3">Back to Guest List</a>
     </div>
   </div>
 @endsection
