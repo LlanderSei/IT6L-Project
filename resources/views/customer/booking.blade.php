@@ -208,7 +208,7 @@
           </div>
 
           <div class="form-group services-ticklist d-flex flex-column mb-2">
-            <label>Additional Services (Optional)</label>
+            <label>Additional Services</label>
             @forelse ($Services as $service)
               <label>
                 <input type="checkbox" name="Services[]" value="{{ $service->ID }}"

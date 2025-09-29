@@ -24,14 +24,16 @@
   <body>
     <!-- Header Navigation -->
     <header class="shadow-sm">
-      <nav class="navbar navbar-expand-lg navbar-light ">
+      <nav class="navbar navbar-expand-lg navbar-light bg-blue-100">
         <div class="container-fluid ms-5 me-5">
           <!-- Logo and Text (Start) -->
           <div class="d-flex align-items-center">
             <a class="navbar-brand" href="{{ route('home') }}">
               <img src="{{ asset('img/logo_hotelNservices.jpg') }}" alt="KagayakuKin Yume Logo" style="height: 40px;">
             </a>
-            <span class="fs-4 navbar-title">KagayakuKin Yume Hotel</span>
+            <a class="link-underline link-underline-opacity-0" href="{{ route('home') }}">
+              <span class="fs-4 navbar-title">KagayakuKin Yume Resort</span>
+            </a>
           </div>
 
           <!-- Toggler for Mobile -->

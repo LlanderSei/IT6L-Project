@@ -26,7 +26,7 @@
 
     <!-- Facilities Section -->
     <section class="mb-5">
-      <h2 class="display-6 fw-bold text-center mb-3 heading-underline" >Our Facilities</h2>
+      <h2 class="display-6 fw-bold text-center mb-3 heading-underline">Our Facilities</h2>
       <p class="text-center text-muted mb-5">We offer modern (5 star) hotel facilities for your comfort.</p>
       <div class="row row-cols-1 row-cols-md-3 g-4">
         <div class="col">
@@ -113,22 +113,26 @@
       <div class="row row-cols-1 row-cols-md-3 g-4">
 
         @forelse($Rooms as $Room)
-          <div class="col">
-            <div class="card h-100 room-card">
-              <div class="card-img-container">
-                <img src="{{ asset($Room->ImagePathname) }}" class="img-fluid"
-                  style="width: 100%; height: 200px; object-fit: cover;" alt="Deluxe King Room">
-              </div>
-              <div class="card-body">
-                <h3 class="card-title fs-5">{{ $Room->RoomTypeName }} Suite</h3>
-                <p class="card-text">{{ $Room->RoomDescription }}</p>
-                <div class="d-flex justify-content-between align-items-center">
-                  <span class="fw-bold">₱{{ $Room->RoomPrice }}/night</span>
-                  <a href="booking.php" class="btn btn-primary">Book Now</a>
+          <form action="{{ route('booking') }}" method="POST">
+            @csrf
+            <input type="hidden" name="ChosenRoom" value="{{ $Room->RoomTypeName }}">
+            <div class="col">
+              <div class="card h-100 room-card">
+                <div class="card-img-container">
+                  <img src="{{ asset($Room->ImagePathname) }}" class="img-fluid"
+                    style="width: 100%; height: 200px; object-fit: cover;" alt="Deluxe King Room">
+                </div>
+                <div class="card-body">
+                  <h3 class="card-title fs-5">{{ $Room->RoomTypeName }} Suite</h3>
+                  <p class="card-text">{{ $Room->RoomDescription }}</p>
+                  <div class="d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">₱{{ $Room->RoomPrice }}/night</span>
+                    <button type="submit" class="btn btn-primary">Book Now</button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          </form>
         @empty
           <div class="col">
             <div class="card h-100 room-card>
