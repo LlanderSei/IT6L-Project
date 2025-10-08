@@ -83,6 +83,7 @@
                     @if (Auth::user()->Role === 'Admin')
                       <li><a class="dropdown-item" href="{{ route('admin.dashboard') }}">Admin Dashboard</a></li>
                     @endif
+                    <li><a class="dropdown-item" href="{{ route('profile') }}">Profile</a></li>
                     <li>
                       <form action="{{ route('logout') }}" method="POST" id="logoutForm">
                         @csrf
@@ -243,18 +244,8 @@
                   document.querySelector('#loginFormSubmit input[name="_token"]').value = data.csrf_token;
                   document.querySelector('#signupFormSubmit input[name="_token"]').value = data.csrf_token;
                 }
-                // Reattach auth button listener
-                const newAuthBtn = document.getElementById('AuthBtn');
-                if (newAuthBtn) {
-                  newAuthBtn.addEventListener('click', () => {
-                    const form = newAuthBtn.dataset.form;
-                    if (form === 'login') {
-                      document.getElementById('login-tab').click();
-                    } else if (form === 'signup') {
-                      document.getElementById('signup-tab').click();
-                    }
-                  });
-                }
+                // Redirect to home page after logout
+                window.location.href = '{{ route('home') }}';
               } else {
                 showToast('error', data.message || 'Logout failed. Please try again.');
               }
@@ -375,6 +366,7 @@
               </button>
               <ul class="dropdown-menu" aria-labelledby="userDropdown">
                 ${user.Role === 'Admin' ? '<li><a class="dropdown-item" href="{{ route('admin.dashboard') }}">Admin Dashboard</a></li>' : ''}
+                <li><a class="dropdown-item" href="{{ route('profile') }}">Profile</a></li>
                 <li>
                   <form action="{{ route('logout') }}" method="POST" id="logoutForm">
                     <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]').content}">

@@ -81,4 +81,27 @@ class PageController extends Controller {
       'reservation' => $reservation,
     ]);
   }
+
+  public function profile() {
+    $user = Auth::user();
+
+    $currentBooking = Booking::with(['roomType', 'roomSize', 'servicesAdded', 'costDetails', 'assignedRooms.room', 'paymentInfo'])
+      ->where('UserID', Auth::id())
+      ->whereIn('BookingStatus', ['Pending', 'Confirmed', 'Ongoing'])
+      ->orderBy('created_at', 'desc')
+      ->first();
+
+    $bookingHistory = Booking::with(['roomType', 'roomSize', 'servicesAdded', 'costDetails', 'paymentInfo'])
+      ->where('UserID', Auth::id())
+      ->whereIn('BookingStatus', ['Ended', 'Cancelled'])
+      ->orderBy('created_at', 'desc')
+      ->get();
+
+    return view('customer.profile', [
+      'title' => 'Profile',
+      'user' => $user,
+      'currentBooking' => $currentBooking,
+      'bookingHistory' => $bookingHistory,
+    ]);
+  }
 }

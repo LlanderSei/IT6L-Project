@@ -24,6 +24,7 @@ Route::post('/logout', [AuthController::class, 'LogoutUser'])->name('logout');
 
 Route::middleware('RestrictByRole:Customer,Cashier')->group(function () {
   Route::get('/reservation', [PageController::class, 'Reservation'])->name('reservation');
+  Route::get('/profile', [PageController::class, 'profile'])->name('profile');
   Route::post('/booking/append', [BookingController::class, 'AppendBooking'])->name('append.booking');
   Route::get('/booking/checkout', [CheckoutController::class, 'CheckoutForm'])->name('checkout');
   Route::post('/booking/process-payment', [CheckoutController::class, 'ProcessPayment'])->name('process.payment');
