@@ -289,6 +289,9 @@
                 const authModalInstance = bootstrap.Modal.getInstance(authModal);
                 authModalInstance.hide();
                 updateAuthSection(data.user);
+                if (data.redirect) {
+                  window.location.href = data.redirect;
+                }
                 if (data.csrf_token) {
                   document.querySelector('meta[name="csrf-token"]').setAttribute('content', data.csrf_token);
                   document.querySelector('#loginFormSubmit input[name="_token"]').value = data.csrf_token;

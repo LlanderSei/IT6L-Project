@@ -199,6 +199,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
+      let currentOccupancyData = [];
+
       // Fetch metrics and chart data on page load
       fetch('{{ route('admin.dashboard-data') }}?period=weekly', {
           headers: {
@@ -208,20 +210,42 @@
         })
         .then(res => res.json())
         .then(data => {
-          document.getElementById('check-in').textContent = data.metrics.checkIn;
-          document.getElementById('check-out').textContent = data.metrics.checkOut;
-          document.getElementById('total-in-hotel').textContent = data.metrics.totalInHotel;
-          document.getElementById('available-rooms').textContent = data.metrics.availableRooms;
-          document.getElementById('occupied-rooms').textContent = data.metrics.occupiedRooms;
-          document.getElementById('revenue-today').textContent = '₱' + data.metrics.revenueToday.toLocaleString();
-          document.getElementById('monthly-revenue').textContent = '₱' + data.metrics.monthlyRevenue
-          .toLocaleString();
-          document.getElementById('occupancy-rate').textContent = data.metrics.occupancyRate.toFixed(2) + '%';
+          // Debug logs to check data structure
+          console.log('Metrics:', data.metrics);
+          console.log('Chart Data:', data.chartData);
 
-          // Update chart with initial data
-          revenueChart.data.labels = data.chartData.labels;
-          revenueChart.data.datasets[0].data = data.chartData.revenueData;
-          revenueChart.data.datasets[1].data = data.chartData.occupancyData;
+          // Update metrics row
+          document.getElementById('check-in').textContent = data.metrics.checkIn ?? 0;
+          document.getElementById('check-out').textContent = data.metrics.checkOut ?? 0;
+          document.getElementById('total-in-hotel').textContent = data.metrics.totalInHotel ?? 0;
+          document.getElementById('available-rooms').textContent = data.metrics.availableRooms ?? 0;
+          document.getElementById('occupied-rooms').textContent = data.metrics.occupiedRooms ?? 0;
+          document.getElementById('revenue-today').textContent = '₱' + (data.metrics.revenueToday ?? 0)
+            .toLocaleString();
+          document.getElementById('monthly-revenue').textContent = '₱' + (data.metrics.monthlyRevenue ?? 0)
+            .toLocaleString();
+          document.getElementById('occupancy-rate').textContent = (data.metrics.occupancyRate ?? 0).toFixed(2) +
+            '%';
+
+          // Defensive check for chartData occupancyData format
+          if (Array.isArray(data.chartData.occupancyData) && data.chartData.occupancyData.length > 0 && typeof data
+            .chartData.occupancyData[0] === 'object') {
+            currentOccupancyData = data.chartData.occupancyData;
+            revenueChart.data.labels = data.chartData.labels;
+            revenueChart.data.datasets[0].data = data.chartData.revenueData;
+            revenueChart.data.datasets[0].tooltipData = data.chartData.tooltipData;
+            revenueChart.data.datasets[1].data = data.chartData.occupancyData.map(d => d.percentage);
+          } else {
+            // Fallback for old format or empty data
+            currentOccupancyData = data.chartData.occupancyData.map(p => ({
+              percentage: p,
+              count: 0
+            }));
+            revenueChart.data.labels = data.chartData.labels;
+            revenueChart.data.datasets[0].data = data.chartData.revenueData;
+            revenueChart.data.datasets[0].tooltipData = data.chartData.tooltipData;
+            revenueChart.data.datasets[1].data = data.chartData.occupancyData;
+          }
           revenueChart.update();
         })
         .catch(error => console.error('Error:', error));
@@ -233,26 +257,72 @@
         data: {
           labels: [],
           datasets: [{
-            label: 'Revenue',
+            label: 'Revenue Trend (%)',
             data: [],
             borderColor: '#EFBF04',
-            fill: false
+            fill: false,
+            yAxisID: 'y'
           }, {
-            label: 'Occupancy Rate',
+            label: 'Occupancy Rate (%)',
             data: [],
             borderColor: '#000',
-            fill: false
+            fill: false,
+            yAxisID: 'y1'
           }]
         },
         options: {
           scales: {
             y: {
+              type: 'linear',
+              position: 'left',
+              title: {
+                display: true,
+                text: 'Trend (%)'
+              },
+              ticks: {
+                callback: function(value) {
+                  return value + '%';
+                }
+              },
+              beginAtZero: false
+            },
+            y1: {
+              type: 'linear',
+              position: 'right',
+              title: {
+                display: true,
+                text: 'Occupancy (%)'
+              },
+              ticks: {
+                callback: function(value) {
+                  return value + '%';
+                }
+              },
+              grid: {
+                drawOnChartArea: false
+              },
               beginAtZero: true
             }
           },
           plugins: {
             legend: {
               position: 'bottom'
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  if (context.datasetIndex === 0) {
+                    const tooltipData = context.dataset.tooltipData || [];
+                    const revenueValue = tooltipData[context.dataIndex] !== undefined ? tooltipData[context
+                      .dataIndex] : context.parsed.y;
+                    return 'Percentile: ' + context.parsed.y.toFixed(2) + '%\nRevenue: ₱' + revenueValue
+                      .toLocaleString();
+                  } else {
+                    const d = currentOccupancyData[context.dataIndex];
+                    return 'Occupancy: ' + d.percentage + '% (' + d.count + ')';
+                  }
+                }
+              }
             }
           }
         }
@@ -280,9 +350,11 @@
             })
             .then(res => res.json())
             .then(data => {
+              currentOccupancyData = data.chartData.occupancyData;
               revenueChart.data.labels = data.chartData.labels;
               revenueChart.data.datasets[0].data = data.chartData.revenueData;
-              revenueChart.data.datasets[1].data = data.chartData.occupancyData;
+              revenueChart.data.datasets[0].tooltipData = data.chartData.tooltipData;
+              revenueChart.data.datasets[1].data = data.chartData.occupancyData.map(d => d.percentage);
               revenueChart.update();
             })
             .catch(error => console.error('Error:', error));

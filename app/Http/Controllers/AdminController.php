@@ -61,55 +61,103 @@ class AdminController extends Controller {
 
     $labels = [];
     $revenueData = [];
+    $tooltipData = [];
     $occupancyData = [];
 
     if ($period === 'weekly') {
       $start = $today->copy()->startOfWeek();
       $end = $today->copy()->endOfWeek();
-      for ($date = $start; $date <= $end; $date = $date->addDay()) {
+      $lastWeekEnd = $start->copy()->subDay();
+      $lastWeekEndRevenue = (float) PaymentInfos::whereDate('updated_at', $lastWeekEnd)->where('PaymentStatus', 'Verified')->sum('TotalAmount');
+      $revenues = [];
+      $date = $start;
+      while ($date <= $end) {
+        $revenue = (float) PaymentInfos::whereDate('updated_at', $date)->where('PaymentStatus', 'Verified')->sum('TotalAmount');
+        $revenues[] = $revenue;
+        $tooltipData[] = $revenue;
         $labels[] = $date->format('D');
-        $revenueData[] = (float) PaymentInfos::whereDate('updated_at', $date)->where('PaymentStatus', 'Verified')->avg('TotalAmount');
-        $occupancyData[] = (Room::count() > 0) ? (AssignedRoom::whereDate('created_at', $date)
-          ->whereHas('booking', function ($query) use ($date) {
-            $query->where('SettledCheckIn', '<=', $date)->orWhere('SettledCheckOut', '>=', $date);
-          })->count() / Room::count() * 100) : 0;
-        // $occupancyData[] = (Room::count() > 0) ? (AssignedRoom::where('Status', 'Ongoing')
-        //   ->whereHas('booking', function ($query) use ($date) {
-        //     $query->where('SettledCheckIn', '<=', $date)->where('SettledCheckOut', '>=', $date);
-        //   })->count() / Room::count() * 100) : 0;
+        $date = $date->addDay();
+      }
+      for ($i = 0; $i < count($revenues); $i++) {
+        $base = $i === 0 ? $lastWeekEndRevenue : $revenues[$i - 1];
+        $percentile = $base > 0 ? ($revenues[$i] / $base) * 100 : 0;
+        $revenueData[] = round($percentile, 2);
+        $occupancyCount = AssignedRoom::whereIn('Status', ['Ongoing', 'Ended'])
+          ->whereHas('booking', function ($query) use ($start, $i) {
+            $date = $start->copy()->addDays($i);
+            $query->where('SettledCheckIn', '<=', $date)->where('SettledCheckOut', '>=', $date);
+          })->count();
+        $rate = (Room::count() > 0) ? ($occupancyCount / Room::count() * 100) : 0;
+        $occupancyData[] = ['percentage' => round($rate, 2), 'count' => $occupancyCount];
       }
     } elseif ($period === 'monthly') {
       $start = $today->copy()->startOfMonth();
       $end = $today->copy()->endOfMonth();
+      $lastMonthEnd = $start->copy()->subDay();
+      $lastMonthStart = $lastMonthEnd->copy()->startOfMonth();
+      $lastMonthWeeks = [];
+      $d = $lastMonthStart;
+      while ($d <= $lastMonthEnd) {
+        $weekRevenue = (float) PaymentInfos::whereBetween('updated_at', [$d, $d->copy()->addWeek()->subDay()])->where('PaymentStatus', 'Verified')->sum('TotalAmount');
+        $lastMonthWeeks[] = $weekRevenue;
+        $d = $d->addWeek();
+      }
+      $revenues = [];
       $weekCount = 1;
-      for ($date = $start; $date <= $end; $date = $date->addWeek()) {
+      $date = $start;
+      while ($date <= $end) {
+        $revenue = (float) PaymentInfos::whereBetween('updated_at', [$date, $date->copy()->addWeek()->subDay()])->where('PaymentStatus', 'Verified')->sum('TotalAmount');
+        $revenues[] = $revenue;
+        $tooltipData[] = $revenue;
         $labels[] = 'Week ' . $weekCount++;
-        $revenueData[] = (float) PaymentInfos::whereBetween('updated_At', [$date, $date->copy()->addWeek()])->where('PaymentStatus', 'Verified')->avg('TotalAmount');
-        $occupancyData[] = (Room::count() > 0) ? (AssignedRoom::whereHas('booking', function ($query) use ($date) {
-          $query->where('SettledCheckIn', '<=', $date->copy()->addWeek())->orWhere('SettledCheckOut', '>=', $date);
-        })->count() / Room::count() * 100) : 0;
+        $date = $date->addWeek();
+      }
+      for ($i = 0; $i < count($revenues); $i++) {
+        $base = $i === 0 ? (count($lastMonthWeeks) > 0 ? end($lastMonthWeeks) : 0) : $revenues[$i - 1];
+        $percentile = $base > 0 ? ($revenues[$i] / $base) * 100 : 0;
+        $revenueData[] = round($percentile, 2);
+        $occupancyCount = AssignedRoom::whereIn('Status', ['Ongoing', 'Ended'])
+          ->whereHas('booking', function ($query) use ($start, $i) {
+            $date = $start->copy()->addWeeks($i);
+            $query->where('SettledCheckIn', '<=', $date->copy()->addWeek()->subDay())->where('SettledCheckOut', '>=', $date);
+          })->count();
+        $rate = (Room::count() > 0) ? ($occupancyCount / Room::count() * 100) : 0;
+        $occupancyData[] = ['percentage' => round($rate, 2), 'count' => $occupancyCount];
       }
     } elseif ($period === 'yearly') {
-      $start = $today->copy()->startOfYear();
-      $end = $today->copy()->endOfYear();
+      $lastYearDecRevenue = (float) PaymentInfos::whereMonth('updated_at', 12)
+        ->whereYear('updated_at', $today->year - 1)
+        ->where('PaymentStatus', 'Verified')
+        ->sum('TotalAmount');
+      $revenues = [];
       for ($month = 1; $month <= 12; $month++) {
-        $labels[] = Carbon::createFromDate($today->year, $month, 1)->format('M');
-        $revenueData[] = (float) PaymentInfos::whereMonth('updated_at', $month)
-          ->whereYear('created_at', $today->year)
+        $revenue = (float) PaymentInfos::whereMonth('updated_at', $month)
+          ->whereYear('updated_at', $today->year)
           ->where('PaymentStatus', 'Verified')
-          ->avg('TotalAmount');
-        $occupancyData[] = (Room::count() > 0) ? (AssignedRoom::whereHas('booking', function ($query) use ($today, $month) {
-          $query->whereMonth('CheckInDate', $month)->whereYear('SettledCheckIn', $today->year);
-        })->count() / Room::count() * 100) : 0;
+          ->sum('TotalAmount');
+        $revenues[] = $revenue;
+        $tooltipData[] = $revenue;
+        $labels[] = Carbon::createFromDate($today->year, $month, 1)->format('M');
+      }
+      for ($i = 0; $i < count($revenues); $i++) {
+        $base = $i === 0 ? $lastYearDecRevenue : $revenues[$i - 1];
+        $percentile = $base > 0 ? ($revenues[$i] / $base) * 100 : 0;
+        $revenueData[] = round($percentile, 2);
+        $occupancyCount = AssignedRoom::whereIn('Status', ['Ongoing', 'Ended'])
+          ->whereHas('booking', function ($query) use ($today, $i) {
+            $month = $i + 1;
+            $query->whereMonth('SettledCheckIn', $month)->whereYear('SettledCheckIn', $today->year);
+          })->count();
+        $rate = (Room::count() > 0) ? ($occupancyCount / Room::count() * 100) : 0;
+        $occupancyData[] = ['percentage' => round($rate, 2), 'count' => $occupancyCount];
       }
     }
 
     $chartData = [
       'labels' => $labels,
       'revenueData' => $revenueData,
-      'occupancyData' => array_map(function ($rate) {
-        return round($rate, 2);
-      }, $occupancyData),
+      'tooltipData' => $tooltipData,
+      'occupancyData' => $occupancyData,
     ];
 
     Log::debug('getDashboardData Response:', ['metrics' => $metrics, 'chartData' => $chartData]);
