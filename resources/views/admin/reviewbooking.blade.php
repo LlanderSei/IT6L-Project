@@ -187,6 +187,16 @@
 
       <h3>Actions</h3>
       <div class="d-flex flex-wrap gap-2">
+        @if (
+            $booking->BookingStatus === 'Pending' &&
+                $booking->paymentInfo &&
+                $booking->paymentInfo->PaymentStatus === 'Submitted')
+          <form action="{{ route('admin.booking.accept', $booking->ID) }}" method="POST">
+            @csrf
+            @method('PATCH')
+            <button type="submit" class="btn btn-success">Accept</button>
+          </form>
+        @endif
         @if ($booking->BookingStatus === 'Confirmed')
           <form action="{{ route('admin.booking.checkin', $booking->ID) }}" method="POST">
             @csrf
