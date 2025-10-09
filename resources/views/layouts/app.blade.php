@@ -141,6 +141,8 @@
                   @csrf
                   <input type="text" class="modal-input" placeholder="Name" name="Name"
                     value="{{ old('Name') }}" required>
+                  <input type="text" class="modal-input" placeholder="Username" name="Username"
+                    value="{{ old('Username') }}" required>
                   <input type="email" class="modal-input" placeholder="Email" name="email"
                     value="{{ old('email') }}" required>
                   <input type="password" class="modal-input" placeholder="Password" name="password" required>
